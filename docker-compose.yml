@@ -1,0 +1,23 @@
+# Development-only PostgreSQL for RareDiseaseCF Day 4.
+# Credentials below are for local hackathon setup only — not production-safe.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rdcf-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rdcf_dev
+      POSTGRES_PASSWORD: rdcf_dev_password
+      POSTGRES_DB: rarediseasecf_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - rdcf_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rdcf_dev -d rarediseasecf_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rdcf_pg_data:

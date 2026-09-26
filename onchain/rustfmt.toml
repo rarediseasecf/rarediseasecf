@@ -1,0 +1,3 @@
+# Edition matches program crates
+edition = "2021"
+max_width = 100

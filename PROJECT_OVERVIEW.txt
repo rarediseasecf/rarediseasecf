@@ -1,0 +1,558 @@
+================================================================================
+                               RareDiseaseCF
+        Privacy-first, hospital-verified crowdfunding for rare disease care
+================================================================================
+
+ONE-LINE SUMMARY
+----------------
+RareDiseaseCF is a crowdfunding platform for rare disease treatment where every
+campaign is verified by a real hospital, the funding goal is locked to the exact
+treatment gap, donations sit in escrow, and money is released in milestones
+directly to the care institution, never as unrestricted cash to an individual.
+
+
+--------------------------------------------------------------------------------
+1. THE PROBLEM
+--------------------------------------------------------------------------------
+
+Rare disease treatment is expensive. Therapies, specialist drugs, and long
+hospital stays often cost more than insurance, government schemes, and family
+savings can cover. Families turn to crowdfunding, but today's crowdfunding has
+four serious problems:
+
+  1. Trust. Donors cannot tell whether a medical story is real. Fake or
+     exaggerated campaigns are common, so genuine patients get less support.
+
+  2. Wrong amounts. Campaigns usually ask for the full treatment cost, even when
+     insurance or assistance already covers part of it. Donors have no way to
+     see the real remaining gap.
+
+  3. Misuse of funds. Money typically goes straight to a personal account, with
+     no guarantee it is spent on the treatment it was raised for.
+
+  4. Privacy. To prove they are real, patients are pressured to post diagnoses,
+     prescriptions, and hospital bills publicly. That sensitive health
+     information stays on the internet permanently.
+
+In short: donors cannot trust, patients have to overshare, and nobody can see
+where the money goes.
+
+
+--------------------------------------------------------------------------------
+2. THE SOLUTION
+--------------------------------------------------------------------------------
+
+RareDiseaseCF fixes each problem with a specific mechanism:
+
+  Trust        -> The patient's own hospital verifies the case through a secure,
+                  single-use email link sent only to a whitelisted hospital
+                  address. Verified campaigns show a badge such as
+                  "Verified by verify@democare.hospital".
+
+  Right amount -> The server calculates the funding gap. It is never typed in
+                  freely:
+                      Funding gap = treatment cost
+                                    - external assistance (insurance, grants)
+                                    - patient's own contribution
+                  The hospital confirms these figures and the goal is then
+                  locked.
+
+  Fund safety  -> Donations are held in escrow and released in four milestones
+                  (25%, 50%, 75%, 100%). Each release needs an explicit
+                  approval, and the money goes to the hospital or provider, not
+                  to the patient.
+
+  Privacy      -> Medical documents are encrypted and only the verifying
+                  hospital can see them. The public sees a generic campaign
+                  title, the verified goal, progress, and a sanitized timeline.
+                  No health data is ever put on the blockchain.
+
+  Transparency -> A public transparency page shows each campaign's life story
+                  (submitted, verified, published, donations, milestones
+                  settled) plus a donor leaderboard that respects donors who
+                  chose to stay anonymous.
+
+
+--------------------------------------------------------------------------------
+3. WHO USES IT (ROLES)
+--------------------------------------------------------------------------------
+
+  1. Patient / caregiver (creator)
+     Submits a case with treatment details, costs, the hospital's email,
+     2 to 8 supporting documents, and an optional public campaign photo.
+     No crypto wallet is needed.
+
+  2. Hospital verifier
+     Receives a secure magic link by email, reviews the documents and numbers,
+     then approves or rejects with a reason code. When approving, the hospital
+     chooses how it will receive funds: Stablecoin (USDC on Solana), which asks
+     for the institution's Solana wallet address, or Fiat (bank transfer),
+     which is marked "coming soon" and cannot be selected for approval yet.
+
+  3. Donor
+     Browses verified campaigns and donates with USDC from a Solana wallet
+     (Phantom or Solflare). Card / fiat donations are shown as "coming soon".
+     Can donate anonymously.
+
+  4. Platform admin
+     Manages the hospital whitelist and publishes campaigns. Milestone
+     payouts are automatic; the admin page only offers a manual retry.
+
+  5. Provider (optional on-chain path)
+     A registered care provider confirms fulfillment of treatment before the
+     full payment is released on-chain.
+
+
+--------------------------------------------------------------------------------
+4. END-TO-END FLOW
+--------------------------------------------------------------------------------
+
+  Step 1  Submit
+          The patient fills a 4-step form: treatment need, cost and institution,
+          assistance, then an optional campaign photo and the documents. The
+          photo is shown publicly, so the form warns not to use documents or
+          anything identifying; location/camera data is removed automatically.
+          The hospital email must be an
+          institutional address; Gmail, Yahoo, Outlook and similar personal
+          domains are rejected. The case gets a short 5-letter ID
+          (for example K7MQP).
+
+  Step 2  Hospital verification
+          If the hospital's email domain is on the whitelist, the system sends a
+          signed magic link to that address. The link is valid for at most
+          24 hours, works only once, and is tied to that one case and that one
+          email.
+
+  Step 3  Approve and lock
+          The hospital opens the link, views the documents (and a preview of
+          the public campaign photo, if any), confirms the numbers, and picks
+          a payout method. Choosing Stablecoin (USDC) asks
+          for the institution's Solana wallet address, which is checked and
+          stored encrypted; Fiat (bank transfer) shows a "not supported yet,
+          rolling out soon" notice. On approval the funding gap is locked, the campaign
+          is created with four LOCKED milestones and a 180-day (6-month)
+          window, and it is published with the verified badge. In on-chain
+          mode the server also creates the campaign escrow on Solana, bound to
+          the hospital's wallet. A case with a zero funding gap cannot be
+          approved.
+
+  Step 4  Donate
+          Donors give in USDC (card / fiat donations are coming soon). Each
+          donation is a real USDC transfer from the donor's wallet into the
+          campaign's on-chain escrow vault. The server checks every donation on
+          the blockchain (successful, right campaign vault, right token, exact
+          amount) before counting it, and never counts the same transaction
+          twice.
+
+  Step 5  Milestones release instantly
+          The moment a donation takes the amount raised past 25% of the goal,
+          that 25% share is sent from the escrow vault straight to the
+          hospital's registered wallet by the smart contract (settle_milestone,
+          no fee, no manual approval). The same happens at 50%, 75%, and 100%.
+          The contract checks the threshold itself and only pays the
+          hospital's wallet, so anyone can trigger it; the server does so
+          right after each donation and retries hourly if a send fails. Each
+          payout is recorded as e.g. SETTLE-K7MQP-25 with its transaction
+          signature, and the Milestone escrow section links to it on Solana
+          Explorer. Paying the same milestone twice is blocked, and the total
+          paid can never exceed what was raised or the goal.
+
+  Step 6  Campaign ends (6-month rule)
+          When the 6 months are up, everything raised but not yet paid out
+          goes to the hospital - even if the next milestone was never reached.
+          Example: if 48% was raised, 25% was already paid at the milestone
+          and the remaining 23% is sent now. The smart contract enforces this
+          (release_expired_funds): anyone can trigger it, but the money can
+          only go to the hospital's wallet, so it can never get stuck. The
+          server triggers it automatically every hour, and the Milestone
+          escrow section shows it with a Solana Explorer link.
+
+  Step 7  Transparency
+          Every step appears on the public timeline in plain, non-medical
+          language.
+
+  Milestone lifecycle:  LOCKED -> ELIGIBLE -> APPROVED -> SETTLED
+                        (the last three happen back-to-back, automatically)
+
+
+--------------------------------------------------------------------------------
+5. ARCHITECTURE
+--------------------------------------------------------------------------------
+
+The system has three layers plus a database:
+
+   +--------------------+      HTTPS / JSON      +----------------------+
+   |  Web app (React)   |  <------------------>  |  API server (Express)|
+   |  Vite + TypeScript |                        |  Node + TypeScript   |
+   +---------+----------+                        +----------+-----------+
+             |                                              |
+             | wallet signs transactions                    | SQL (Drizzle ORM)
+             v                                              v
+   +--------------------+                        +----------------------+
+   | Solana program     |                        |  PostgreSQL          |
+   | (Anchor, Rust)     |                        |  cases, campaigns,   |
+   | escrow vault, USDC |                        |  donations, etc.     |
+   +--------------------+                        +----------------------+
+
+  Frontend
+    React 18, TypeScript, Vite, React Router. Solana wallet adapter for Phantom
+    and Solflare. Font Awesome icons. Fully mobile-responsive with a slide-out
+    navigation drawer.
+
+  Backend
+    Express on Node.js with TypeScript. Drizzle ORM on PostgreSQL. Multer for
+    document uploads. AES-256-GCM encryption for sensitive case data and
+    uploaded documents. HMAC signing for magic links. Hospital emails are sent
+    through SMTP (nodemailer) when configured; in development the link is
+    logged instead. A Solana relayer signs escrow actions with a server-only
+    platform key. Per-IP rate limiting in production.
+
+  Blockchain
+    A Solana program written in Rust with the Anchor framework. It holds USDC in
+    a per-campaign escrow vault and releases it only to the registered provider
+    wallet.
+
+  Database
+    PostgreSQL, run locally with Docker Compose.
+
+  Networks (setting: SOLANA_CLUSTER)
+    There is no simulated mode. The app runs on Solana Devnet (test USDC,
+    no real value) or Solana Mainnet (real USDC) - switching is a matter of
+    changing the cluster and USDC mint. On either network the server creates
+    campaigns on approval, verifies donations, settles milestones, and
+    releases expired campaigns to the hospital.
+
+--------------------------------------------------------------------------------
+6. COMPONENTS IN DETAIL
+--------------------------------------------------------------------------------
+
+6.1 Frontend pages (src/pages)
+------------------------------
+  HomePage                Product landing: hero with an autoplaying walkthrough
+                          video (link to the full video), open campaigns, how
+                          it works (4 steps), a live payout ledger showing a
+                          real campaign's milestone payouts with Solana
+                          Explorer links, a private-vs-public table, and a
+                          closing call to action.
+  SubmitPage              4-step private case submission with document upload
+                          and an optional public campaign photo.
+  CaseStatusPage          Private status page for the patient, protected by a
+                          secure browser cookie.
+  HospitalVerifyPage      Magic-link portal where the hospital reviews
+                          documents, then approves or rejects.
+  CampaignsPage           Browse published, verified campaigns. Instant search
+                          (case ID, hospital, summary), status filters
+                          (Raising, Fully funded, Paid to hospital, Ended)
+                          with counts, hospital filter, and sorting. The
+                          search is kept in the URL so it can be shared.
+  CampaignDetailPage      Campaign story, verified badge, progress bar,
+                          milestone tracker, and donation panel.
+  TransparencyPage        Searchable campaign list beside the public timeline,
+                          milestone escrow, sanitized updates, and donor
+                          leaderboard. Each campaign has a shareable link
+                          (/transparency/<case ID>).
+  AdminHospitalsPage      Hospital whitelist, campaign publishing, manual
+                          milestone payout retry.
+  ReviewerPage /
+  ReviewerCaseDetailPage  Earlier wallet-based reviewer workspace, still
+                          available.
+  ProviderConfirmPage     Provider confirms treatment fulfillment (on-chain
+                          path).
+  PrivacyPage             Plain-language privacy policy (/privacy): what is
+                          collected, who sees it, how it is secured.
+
+6.2 Frontend components (src/components)
+----------------------------------------
+  SiteHeader / SiteFooter      Navigation, wallet account menu, mobile drawer.
+  CampaignCard                 Campaign summary tile with photo and progress.
+  FundingProgress              Color-coded progress bar that changes tone as
+                               funding grows.
+  MilestoneTracker             Visual 25/50/75/100 milestone status, with a
+                               View on Solana link for each payout.
+  SolanaTxLink                 Link to a transaction on Solana Explorer.
+  DonationSelector             Amount presets, USDC (card / fiat coming soon),
+                               anonymous option.
+  StatusBadge                  Campaign status and "Verified by <hospital
+                               email>" badges.
+  VerificationChecklist        What has been verified for a campaign.
+  SearchBox / Highlight        Campaign search input ("/" to focus, Esc to
+                               clear) and highlighting of matched text.
+  TestInboxEmailModal          Devnet test inbox: shows the hospital
+                               verification email in the browser.
+  Modal, InfoAccordion,
+  SectionHeading               Shared layout pieces.
+  PrivacyNotice                Explains what stays private.
+  StepIndicator                Progress through the submission form.
+  WalletSelectionDialog        Choose Phantom or Solflare.
+  WalletOwnershipConfirmation  Sign a message to prove wallet ownership (no
+                               funds move).
+  Connected / Confirmed
+  DonationNotice               Wallet connection and donation status.
+  DevnetNotice                 Honest label for test-network use.
+  FaIcon                       Shared Font Awesome icon helper.
+
+6.3 Frontend libraries (src/lib, src/providers)
+-----------------------------------------------
+  caseApi, hospitalApi, publicCampaignApi, donationApi, adminApi,
+  transparencyApi, reviewerApi, authApi
+                          Typed clients for each group of API endpoints.
+  coverImage              Resizes and re-encodes the campaign photo in the
+                          browser before upload.
+  campaignSearch          Search, status filter, and sort logic for campaign
+                          lists.
+  network                 Active Solana cluster, RPC URL, and labels.
+  rarediseaseProgram      Builds Solana transactions for the escrow program
+                          (donate, settle milestone, release payment).
+  WalletConnectionProvider, WalletSessionProvider, ReviewerSessionProvider
+                          Wallet connection and login session state.
+
+6.4 Backend modules (server/)
+-----------------------------
+  cases/          Case intake: validation, encrypted storage, document upload
+                  with file-type sniffing (PDF/PNG/JPG, max 5 MB, 2 to 8
+                  files), optional campaign photo (PNG/JPG, EXIF/GPS and
+                  other metadata stripped), 5-letter case IDs, audit events.
+  hospitals/      Hospital whitelist, personal-email blacklist, magic-link
+                  issue and verify, email delivery, the verification service,
+                  approve and reject reason codes, payout method validation
+                  (USDC wallet live; fiat returns "coming soon").
+  campaigns/      Publishing campaigns, public-safe serializer (explicit
+                  allowlist of fields), seeding the four milestones.
+  donations/      Records donations, updates amount raised, unlocks eligible
+                  milestones, and serves the leaderboard.
+  milestones/     Milestone state machine and tranche math: each tranche is the
+                  difference between thresholds, with over-settle and
+                  double-settle protection.
+  escrow/         EscrowService: on-chain custody through the relayer
+                  (register campaign, verify donation, settle, release).
+  chain/          Solana relayer: creates campaigns on hospital approval,
+                  verifies donation transactions, signs milestone settles and
+                  expiry releases with the server-only platform key.
+  settlement/     Records settlement toward the institution.
+  transparency/   Builds the public timeline, updates, and leaderboard,
+                  exposing only whitelisted event types.
+  reviewer/, auth/  Wallet message-sign login for reviewers and donors.
+  security/       AES-256-GCM encryption, case-access cookies, timing-safe
+                  secret comparison.
+  middleware/     Origin checks, rate limiting, consistent error handling.
+  utils/          Case ID generation and small shared helpers.
+  db/             Drizzle schema and migrations.
+
+6.5 Database tables (PostgreSQL)
+--------------------------------
+  cases                  Private case records (sensitive fields encrypted),
+                         plus a reference to the optional campaign photo.
+  case_documents         Uploaded supporting files (stored off-chain).
+  case_access_sessions   Patient's private status access.
+  case_audit_events      Full event history, which feeds the transparency
+                         timeline.
+  hospital_whitelist     Approved hospitals and their email domains.
+  magic_link_tokens      Hashed, single-use verification tokens.
+  case_review_decisions  Approval and rejection decisions with reasons.
+  campaign_drafts        Campaigns with the locked funding gap, amount raised,
+                         and publication status.
+  campaign_milestones    25/50/75/100 milestones and their status.
+  donations              Every donation (amount, method, anonymous flag).
+  settlements            Payout records with amount and transaction signature.
+  reviewer_registry, provider_registry, reviewer_sessions
+                         Allowlisted reviewers, providers, and sessions.
+
+6.6 Solana program (onchain/programs/rarediseasecf)
+---------------------------------------------------
+  Accounts
+    PlatformConfig   Platform admin and the accepted USDC mint.
+    VerifierRegistry Approved verifiers.
+    ProviderRegistry Approved care providers.
+    Campaign         Opaque ID, status, locked funding gap, amount raised,
+                     provider wallet, expiry, milestone bitmask.
+                     No patient data.
+    Vault            A USDC token account controlled by the program, one per
+                     campaign.
+
+  Instructions
+    initialize_platform        Set up the platform once.
+    upsert_verifier /
+    upsert_provider            Register verifiers and providers.
+    create_campaign /
+    approve_campaign           Create a campaign and lock its funding gap.
+    donate_usdc                Donor sends USDC into the campaign vault.
+    settle_milestone           Release one reached milestone tranche to the
+                               provider. Anyone can call it; the threshold
+                               is checked and the destination is fixed.
+    confirm_fulfillment        Provider confirms treatment was delivered.
+    release_provider_payment   Release the exact full gap to the provider,
+                               once only.
+    release_expired_funds      After the campaign ends, send everything left
+                               in the vault to the provider. Anyone can call
+                               it; the destination is fixed.
+
+  Hard rules enforced on-chain
+    - Money can only go to the provider wallet registered for that campaign.
+    - The payout amount is always the locked gap, the milestone tranche, or
+      (after expiry) the remaining vault balance - never an amount chosen by
+      the caller.
+    - Campaigns last at most 180 days (6 months). No donor refunds: at the end, the
+      hospital receives whatever was raised.
+    - A second settlement of the same payment fails.
+    - No health information is stored on-chain.
+
+
+--------------------------------------------------------------------------------
+7. SECURITY AND PRIVACY
+--------------------------------------------------------------------------------
+
+  - Sensitive case text, uploaded documents, and hospital payout details are
+    encrypted at rest with AES-256-GCM (tampered files are rejected).
+  - Documents are never public. Only the hospital holding a valid magic link
+    can download them.
+  - The hospital wallet address is checked for a valid Solana format, and
+    its first and last characters are shown back for a quick match check.
+  - On-chain donations are verified against the blockchain before they
+    count; a transaction can only be counted once.
+  - The platform signing key lives only on the server, never in the browser.
+  - Rate limits on submissions, verification links, donations, and admin.
+  - The legacy reviewer API switches off in production.
+  - The campaign photo is the only public upload. Metadata (GPS, camera,
+    author) is stripped, and it is served only after the campaign is
+    published.
+  - A public Privacy Policy (/privacy) explains data handling and security.
+  - Magic links are HMAC-signed, expire within 24 hours, work once, and are
+    bound to one case and one email. Only a hash of the token is stored.
+  - Personal email domains cannot act as a hospital.
+  - Admin actions need a secret header, checked with a timing-safe comparison.
+  - Uploads are limited by size, count, and verified file type (the actual
+    file bytes are checked, not just the file extension).
+  - Public APIs use an explicit allowlist of fields, so internal IDs, bank
+    details, wallets, and medical text cannot leak by accident.
+  - The frontend holds no private keys; only public network settings.
+  - Automated tests cover funding-gap math, milestone rules, double-settle and
+    over-settle protection, on-chain donation verification, network
+    configuration, the email blacklist, the hospital whitelist, settlement
+    references, and expiry handling.
+
+
+--------------------------------------------------------------------------------
+8. HONEST STATUS
+--------------------------------------------------------------------------------
+
+  Real in this build (nothing is simulated)
+    - Full web app, API, and PostgreSQL persistence
+    - Server-side validation and funding-gap calculation
+    - Encryption, magic-link security, and access control
+    - Milestone state machine with settlement safeguards
+    - Solana escrow program (Rust/Anchor) and wallet integration
+    - Donations, milestone payouts, and expiry payouts as real USDC
+      transactions on Solana Devnet or Mainnet
+
+  Development convenience
+    - Without SMTP configured (development only), the hospital verify link
+      is logged to the server console instead of emailed
+    - Test hospital inbox (Devnet only): using aa@aa.aa as the hospital
+      email shows the verification email straight to the submitter, so
+      anyone can try the full flow without a real hospital. It is switched
+      off automatically on Mainnet.
+
+  Not automated
+    - Medical document authenticity checks (the hospital verifies)
+
+  Coming soon (shown in the app as "coming soon")
+    - Fiat (bank transfer) payouts for hospitals
+    - Card / fiat donations for donors
+    - USDC-to-fiat off-ramp via Circle / MoonPay
+
+  Not a certified healthcare system. On Devnet, use synthetic data and test
+  wallets only.
+
+
+--------------------------------------------------------------------------------
+9. WALKTHROUGH
+--------------------------------------------------------------------------------
+
+    1. Submit a case at /submit, including a campaign photo. On Devnet, use
+       aa@aa.aa as the hospital email to get the test inbox.
+    2. Open the hospital verification link (from the test inbox, the email,
+       or the API log during local development). Review, pick USDC payout,
+       approve.
+    3. The campaign goes live on /campaigns with its photo and verified badge.
+    4. Donate at least 25% of the goal: the 25% milestone is sent to the
+       hospital wallet automatically and shows "Sent" with a View on Solana
+       link in the Milestone escrow section.
+    5. Open the transparency page: the donation and released milestone appear,
+       with no medical documents shown.
+
+  Recorded walkthrough of this flow (about 1 minute):
+    public/walkthrough/walkthrough.mp4       full video (also linked from the
+                                             landing page as "Full video")
+    public/walkthrough/walkthrough-hero.mp4  cropped version used in the
+                                             landing page hero
+    docs/walkthrough/                        MP4, GIF, and the source frames
+
+
+--------------------------------------------------------------------------------
+10. SUGGESTED NARRATION FOR AN AI DEMO VIDEO
+--------------------------------------------------------------------------------
+
+  [Scene 1 - The problem]
+  "Rare disease treatment can cost more than any family can afford. Many turn
+  to crowdfunding, but donors can't tell which stories are real, campaigns
+  often ask for more than is needed, the money goes to personal accounts, and
+  patients are forced to post private medical details online."
+
+  [Scene 2 - Introducing RareDiseaseCF]
+  "RareDiseaseCF is crowdfunding built for trust. Every campaign is verified by
+  the patient's own hospital, the goal is locked to the exact treatment gap,
+  and donations are released in milestones directly to the care provider."
+
+  [Scene 3 - Patient submits]
+  "A patient or caregiver submits a case privately. No crypto wallet needed.
+  They enter treatment costs, insurance or assistance, their own contribution,
+  and upload documents. Only an institutional hospital email is accepted."
+
+  [Scene 4 - Hospital verifies]
+  "The hospital receives a secure, single-use link that expires in 24 hours.
+  Staff review the documents, confirm the numbers, and choose to be paid in
+  USDC to their Solana wallet, with bank payouts coming soon. The funding gap
+  is locked and the campaign goes live with a Verified by Hospital badge."
+
+  [Scene 5 - Donors give]
+  "Donors browse verified campaigns and give with USDC on Solana, with card
+  payments coming soon. They can stay anonymous. A color-coded progress bar and milestone tracker
+  show exactly where the campaign stands."
+
+  [Scene 6 - Milestone escrow]
+  "Funds sit in escrow. The moment the campaign reaches 25, 50, 75, or 100
+  percent, the smart contract sends that 25 percent share straight to the
+  hospital's registered USDC wallet - and each payout links to its Solana
+  transaction. After six months, whatever is left goes to the hospital too.
+  Double payouts and overpayments are blocked."
+
+  [Scene 7 - Transparency and privacy]
+  "Anyone can follow a campaign's full journey on the transparency page, from
+  submission to verification to every payout, while medical records stay
+  encrypted and never touch the blockchain."
+
+  [Scene 8 - Architecture]
+  "Under the hood: a React web app, an Express and PostgreSQL backend with
+  encryption and signed magic links, and a Solana smart contract written in
+  Rust that can only pay the registered provider."
+
+  [Scene 9 - Closing]
+  "RareDiseaseCF: verified need, protected privacy, and every dollar going to
+  care. Crowdfunding that donors can trust and patients can rely on."
+
+
+--------------------------------------------------------------------------------
+11. TECH STACK AT A GLANCE
+--------------------------------------------------------------------------------
+
+  Frontend    React 18, TypeScript, Vite, React Router, Solana Wallet Adapter
+              (Phantom, Solflare), Font Awesome; Inter, Fraunces, and
+              JetBrains Mono fonts
+  Backend     Node.js, Express, TypeScript, Drizzle ORM, Multer
+  Database    PostgreSQL (Docker Compose locally)
+  Blockchain  Solana, Anchor framework (Rust), SPL Token (USDC), Devnet / Mainnet
+  Security    AES-256-GCM, HMAC-SHA256 magic links, HTTP-only cookies,
+              timing-safe secret checks
+  Testing     Node test runner (server), Anchor tests (on-chain)
+
+================================================================================

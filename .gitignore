@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Local secrets / env (never commit real keys)
+.env
+.env.local
+.env.*.local
+
+# Anchor / Solana build artifacts
+onchain/target
+onchain/node_modules
+onchain/.anchor
+onchain/test-ledger
+**/*-keypair.json
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local demo case document uploads (Day 2 — not S3)
+data/case-uploads/
+
+# Local backups / archives (may contain .env or keys)
+*.7z
+*.zip
+*.rar
+*.tar
+*.tar.gz
+

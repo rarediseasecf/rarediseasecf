@@ -1,0 +1,15 @@
+.DS_Store
+*/target
+target
+node_modules
+test-ledger
+.yarn
+.anchor
+**/*.rs.bk
+.cargo-lock
+
+# Program deploy keypairs must never be committed
+target/deploy/*.json
+*.keypair.json
+
+.anchor-test-dist/

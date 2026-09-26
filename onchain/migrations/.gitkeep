@@ -1,0 +1,2 @@
+# Placeholder — Day 7 uses `anchor deploy` / CLI, not SQL-style migrations.
+# Keep this folder so Anchor CLI expectations are satisfied.

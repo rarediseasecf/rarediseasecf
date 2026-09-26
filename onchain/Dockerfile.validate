@@ -1,0 +1,21 @@
+# Fast Day 9 validation path: official Anchor image (Solana 2.1.0 + Anchor 0.31.1).
+# Avoids Agave 4.x io_uring panic inside Docker Desktop:
+#   assertion failed: io_uring_supported()
+#
+# Prefer this over building Dockerfile.validate from scratch.
+
+FROM solanafoundation/anchor:v0.31.1
+
+# Official image may lack Node; install LTS for Anchor TS tests.
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work
+COPY scripts/docker-validate-entrypoint.sh /usr/local/bin/docker-validate-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-validate-entrypoint.sh \
+    && sed -i 's/\r$//' /usr/local/bin/docker-validate-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-validate-entrypoint.sh"]
