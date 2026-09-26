@@ -3,8 +3,27 @@ import type { ServerConfig } from '../config.js'
 import { AuthError } from '../auth/types.js'
 
 /**
+ * Same-origin check: a browser always sends the real page Origin, so a
+ * cross-site page cannot make it equal the host it is posting to. This lets
+ * every domain alias of the deployment (custom domain, *.vercel.app) work.
+ */
+function isSameHost(req: Request, origin: string): boolean {
+  let originHost: string
+  try {
+    originHost = new URL(origin).host
+  } catch {
+    return false
+  }
+  const forwarded = req.headers['x-forwarded-host']
+  const host =
+    (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : '') ||
+    req.headers.host
+  return Boolean(host) && originHost === host
+}
+
+/**
  * Validate Origin for state-changing POST requests.
- * Prefers Vite same-origin proxy; still rejects unexpected origins.
+ * Accepts the configured app origin or the same host the request was sent to.
  */
 export function createOriginGuard(config: ServerConfig) {
   return function requestOrigin(
@@ -41,7 +60,7 @@ export function createOriginGuard(config: ServerConfig) {
       return
     }
 
-    if (origin !== config.appOrigin) {
+    if (origin !== config.appOrigin && !isSameHost(req, origin)) {
       next(
         new AuthError(
           'ORIGIN_NOT_ALLOWED',
