@@ -1,10 +1,10 @@
 /**
- * Local demo file storage for case documents — never S3 in MVP.
+ * Case document validation + encrypted storage (local disk or Vercel Blob).
  */
-import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomBytes } from 'node:crypto'
 import { AppError } from '../errors.js'
+import { readStoredFile, writeStoredFile } from '../storage/fileStore.js'
 import {
   ALLOWED_DOCUMENT_EXT,
   ALLOWED_DOCUMENT_MIME,
@@ -96,19 +96,16 @@ export async function persistCaseDocumentFile(opts: {
     )
   }
 
-  const caseDir = path.join(opts.uploadRoot, opts.caseId)
-  await fs.mkdir(caseDir, { recursive: true })
-
   const ext = extensionForMime(opts.mimetype, opts.originalFilename)
   const safeName = sanitizeOriginalFilename(opts.originalFilename)
   const token = randomBytes(8).toString('hex')
   const storedName = `${opts.documentType.toLowerCase()}-${token}${ext}`
-  const absolute = path.join(caseDir, storedName)
-  await fs.writeFile(absolute, encryptBuffer(opts.buffer, opts.encryption), {
-    flag: 'wx',
-  })
-
-  const storageRef = path.join(opts.caseId, storedName).replace(/\\/g, '/')
+  const storageRef = `${opts.caseId}/${storedName}`
+  await writeStoredFile(
+    opts.uploadRoot,
+    storageRef,
+    encryptBuffer(opts.buffer, opts.encryption)
+  )
 
   return {
     storageRef,
@@ -156,10 +153,9 @@ export async function readStoredDocumentFile(
   encryption: EncryptionKeyMaterial
 ): Promise<Buffer> {
   const absolute = resolveStoredDocumentPath(uploadRoot, storageRef)
-  let data: Buffer
-  try {
-    data = await fs.readFile(absolute)
-  } catch {
+  const relative = path.relative(uploadRoot, absolute).replace(/\\/g, '/')
+  const data = await readStoredFile(uploadRoot, relative)
+  if (!data) {
     throw new AppError(
       'DOCUMENT_NOT_FOUND',
       'Document file could not be located.',

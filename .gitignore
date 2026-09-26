@@ -45,3 +45,7 @@ data/case-uploads/
 *.tar
 *.tar.gz
 
+# Vercel CLI link + agent skills installed by Marketplace integrations
+.vercel
+.agents/
+skills-lock.json

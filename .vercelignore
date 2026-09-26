@@ -1,0 +1,16 @@
+# Never upload local secrets, uploads, or build artifacts to Vercel
+.env
+.env.*
+!.env.example
+data/
+dist/
+onchain/
+docs/walkthrough/
+.agents/
+skills-lock.json
+*.7z
+*.zip
+*.rar
+*.tar
+*.tar.gz
+**/*-keypair.json

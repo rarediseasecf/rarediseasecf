@@ -5,6 +5,7 @@ Every campaign is verified by the patient's hospital, the goal is locked to the 
 
 ![Walkthrough: submit a case, hospital approves, donate, milestone paid on Solana](docs/walkthrough/walkthrough.gif)
 
+- **Live demo:** [rarediseasecf.vercel.app](https://rarediseasecf.vercel.app)
 - **Smart contract (Solana Devnet):** [`3ChG4eL5EvhrELWbAZs3cdVt8P9X1CfrRwfF6gqfKG9d`](https://explorer.solana.com/address/3ChG4eL5EvhrELWbAZs3cdVt8P9X1CfrRwfF6gqfKG9d?cluster=devnet)
 - **Full walkthrough video (1 min):** [`public/walkthrough/walkthrough.mp4`](public/walkthrough/walkthrough.mp4)
 - **Detailed write-up:** [`PROJECT_OVERVIEW.txt`](PROJECT_OVERVIEW.txt)
@@ -86,6 +87,20 @@ Using a new platform key or cluster? Initialise it once with `onchain/scripts/de
 
 Without SMTP configured, hospital verification links are printed in the API log instead of emailed.
 
+## Deploy (Vercel)
+
+The live demo runs on Vercel: the Vite build is served as static files and the Express API runs as one Vercel Function (`api/index.ts` → `server/vercel.ts`), configured in `vercel.json`.
+
+- **Database:** Neon Postgres (Vercel Marketplace) provides `DATABASE_URL`. Apply migrations with the unpooled URL: `DATABASE_URL=<DATABASE_URL_UNPOOLED> npm run db:migrate`.
+- **Uploads:** a private Vercel Blob store (`BLOB_READ_WRITE_TOKEN`). Files are encrypted before upload; without the token the server uses the local disk.
+- **Background jobs:** a daily Vercel Cron calls `/api/cron/sweep` (protected by `CRON_SECRET`) to retry milestone payouts and release expired campaigns.
+- **Env vars:** the server variables above plus `APP_ORIGIN` (the production URL), a strong `ADMIN_SECRET`, `CRON_SECRET` and the `VITE_*` build variables.
+- Case submissions are limited to 4 MB of files in total (Vercel's request body limit).
+
+```powershell
+vercel deploy --prod
+```
+
 ## Architecture
 
 ```
@@ -99,7 +114,8 @@ React + Vite (web)  ──HTTPS/JSON──▶  Express API (Node, TypeScript)  �
 |---|---|
 | Web app | React 18, TypeScript, Vite, React Router, Solana Wallet Adapter (Phantom, Solflare) |
 | API | Node.js, Express, Drizzle ORM, Multer, AES-256-GCM encryption, HMAC-signed magic links |
-| Database | PostgreSQL (Docker Compose locally) |
+| Database | PostgreSQL (Docker Compose locally, Neon on Vercel) |
+| Hosting | Vercel (static web app + Express as a Vercel Function, Blob for encrypted uploads, Cron) |
 | Smart contract | Solana, Anchor (Rust), SPL Token (USDC) |
 
 ## Security and privacy

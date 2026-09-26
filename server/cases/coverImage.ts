@@ -2,10 +2,9 @@
  * Optional public campaign cover photo.
  * PNG/JPG only; EXIF/GPS/XMP/IPTC/text metadata is stripped before storage.
  */
-import fs from 'node:fs/promises'
-import path from 'node:path'
 import { randomBytes } from 'node:crypto'
 import { AppError } from '../errors.js'
+import { writeStoredFile } from '../storage/fileStore.js'
 import { sniffDocumentBuffer } from './documentSniff.js'
 import {
   encryptBuffer,
@@ -117,14 +116,13 @@ export async function persistCoverImageFile(opts: {
   contentType: CoverImageContentType
   encryption: EncryptionKeyMaterial
 }): Promise<string> {
-  const caseDir = path.join(opts.uploadRoot, opts.caseId)
-  await fs.mkdir(caseDir, { recursive: true })
   const ext = opts.contentType === 'image/png' ? '.png' : '.jpg'
   const storedName = `cover-${randomBytes(8).toString('hex')}${ext}`
-  await fs.writeFile(
-    path.join(caseDir, storedName),
-    encryptBuffer(opts.buffer, opts.encryption),
-    { flag: 'wx' }
+  const storageRef = `${opts.caseId}/${storedName}`
+  await writeStoredFile(
+    opts.uploadRoot,
+    storageRef,
+    encryptBuffer(opts.buffer, opts.encryption)
   )
-  return path.join(opts.caseId, storedName).replace(/\\/g, '/')
+  return storageRef
 }

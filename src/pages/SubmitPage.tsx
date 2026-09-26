@@ -22,6 +22,9 @@ const STEPS = [
   { label: 'Photo, documents & submit' },
 ]
 
+/** Hosted API functions reject request bodies above ~4.5 MB. */
+const MAX_UPLOAD_TOTAL_BYTES = 4 * 1024 * 1024
+
 const DOCUMENT_TYPE_OPTIONS = [
   { value: 'DIAGNOSIS_SUMMARY', label: 'Diagnosis summary' },
   { value: 'TREATMENT_PLAN', label: 'Treatment plan' },
@@ -164,6 +167,12 @@ export default function SubmitPage() {
     setDocs(prev => prev.filter(d => d.id !== id))
   }
 
+  function uploadBytes(): number {
+    return (
+      docs.reduce((sum, d) => sum + d.file.size, 0) + (coverImage?.size ?? 0)
+    )
+  }
+
   function validateStep(): boolean {
     const newErrors: Partial<FormState> & { documents?: string } = {}
     if (step === 0 && !form.treatmentDescription.trim()) {
@@ -190,6 +199,10 @@ export default function SubmitPage() {
       const types = docs.map(d => d.documentType)
       if (new Set(types).size !== types.length) {
         newErrors.documents = 'Each document type may only be used once.'
+      }
+      if (uploadBytes() > MAX_UPLOAD_TOTAL_BYTES) {
+        newErrors.documents =
+          'Files add up to more than 4 MB in total. Please upload smaller scans or compress the PDFs.'
       }
     }
     setErrors(newErrors)

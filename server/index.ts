@@ -2,9 +2,7 @@ import 'dotenv/config'
 import { loadConfig } from './config.js'
 import { createApp } from './app.js'
 import { AppError } from './errors.js'
-import { bootstrapRegistries } from './reviewer/bootstrap.js'
-import { bootstrapHospitals } from './hospitals/bootstrap.js'
-import { testHospitalEnabled } from './hospitals/testHospital.js'
+import { runMilestoneSweeps, runStartupBootstrap } from './startup.js'
 
 let config
 let created
@@ -27,42 +25,7 @@ const { app, stores } = created
 let hospitalsBootstrapped = 0
 
 try {
-  await bootstrapRegistries(
-    stores.dbHandle.db,
-    config.reviewerBootstrapWallets,
-    config.providerBootstrapRecords
-  )
-  hospitalsBootstrapped = await bootstrapHospitals(
-    stores.dbHandle.db,
-    config.hospitalBootstrapRecords,
-    { includeTestHospital: testHospitalEnabled(config.solana.cluster) }
-  )
-  if (config.reviewerBootstrapWallets.length === 0) {
-    console.warn(
-      JSON.stringify({
-        event: 'reviewer_bootstrap_empty',
-        message:
-          'REVIEWER_BOOTSTRAP_WALLETS is empty — reviewer access will be denied until configured.',
-      })
-    )
-  }
-  if (config.providerBootstrapRecords.length === 0) {
-    console.warn(
-      JSON.stringify({
-        event: 'provider_bootstrap_empty',
-        message:
-          'PROVIDER_BOOTSTRAP_RECORDS is empty — case approval will be unavailable until configured.',
-      })
-    )
-  }
-  if (hospitalsBootstrapped === 0) {
-    console.warn(
-      JSON.stringify({
-        event: 'hospital_bootstrap_empty',
-        message: 'No hospital whitelist rows were seeded.',
-      })
-    )
-  }
+  hospitalsBootstrapped = await runStartupBootstrap(config, stores)
 } catch (err) {
   console.error(
     JSON.stringify({
@@ -81,35 +44,11 @@ const cleanupTimer = setInterval(() => {
 }, CLEANUP_INTERVAL_MS)
 cleanupTimer.unref?.()
 
-let sweeping = false
-async function sweepExpiredCampaigns() {
-  if (sweeping) return
-  sweeping = true
-  try {
-    const result = await stores.milestoneService.sweepExpiredCampaigns()
-    if (result.released.length || result.failed.length) {
-      console.info(JSON.stringify({ event: 'expiry_sweep', ...result }))
-    }
-    const milestones = await stores.milestoneService.sweepReachedMilestones()
-    if (milestones.released.length || milestones.failed.length) {
-      console.info(JSON.stringify({ event: 'milestone_sweep', ...milestones }))
-    }
-  } catch (err) {
-    console.error(
-      JSON.stringify({
-        event: 'expiry_sweep_error',
-        name: err instanceof Error ? err.name : 'Unknown',
-      })
-    )
-  } finally {
-    sweeping = false
-  }
-}
 const sweepTimer = setInterval(() => {
-  void sweepExpiredCampaigns()
+  void runMilestoneSweeps(stores)
 }, config.expirySweepIntervalMs)
 sweepTimer.unref?.()
-void sweepExpiredCampaigns()
+void runMilestoneSweeps(stores)
 
 const server = app.listen(config.port, () => {
   console.info(

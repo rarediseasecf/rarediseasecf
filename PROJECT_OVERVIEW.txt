@@ -215,6 +215,14 @@ The system has three layers plus a database:
   Database
     PostgreSQL, run locally with Docker Compose.
 
+  Hosting (live demo: https://rarediseasecf.vercel.app)
+    Vercel. The web app is served as static files; the Express API runs as a
+    single Vercel Function (api/index.ts -> server/vercel.ts). The database is
+    Neon Postgres, encrypted uploads go to a private Vercel Blob store
+    (server/storage/fileStore.ts; local disk when not on Vercel), and a daily
+    Vercel Cron calls /api/cron/sweep to retry milestone payouts and release
+    expired campaigns.
+
   Networks (setting: SOLANA_CLUSTER)
     There is no simulated mode. The app runs on Solana Devnet (test USDC,
     no real value) or Solana Mainnet (real USDC) - switching is a matter of
@@ -549,7 +557,8 @@ The system has three layers plus a database:
               (Phantom, Solflare), Font Awesome; Inter, Fraunces, and
               JetBrains Mono fonts
   Backend     Node.js, Express, TypeScript, Drizzle ORM, Multer
-  Database    PostgreSQL (Docker Compose locally)
+  Database    PostgreSQL (Docker Compose locally, Neon on Vercel)
+  Hosting     Vercel (static site, Express Function, Blob, Cron)
   Blockchain  Solana, Anchor framework (Rust), SPL Token (USDC), Devnet / Mainnet
   Security    AES-256-GCM, HMAC-SHA256 magic links, HTTP-only cookies,
               timing-safe secret checks
