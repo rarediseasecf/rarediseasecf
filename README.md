@@ -1,429 +1,138 @@
 # RareDiseaseCF
 
-Privacy-first healthcare crowdfunding: verified funding gaps, hospital magic-link verification, milestone escrow, and institutional settlement — never unrestricted cash to patients.
+**Crowdfunding for rare disease treatment, secured by a Solana smart contract.**
+Every campaign is verified by the patient's hospital, the goal is locked to the real treatment gap, and donations can only ever be paid to the hospital's wallet, automatically, every 25%.
+
+![Walkthrough: submit a case, hospital approves, donate, milestone paid on Solana](docs/walkthrough/walkthrough.gif)
+
+- **Smart contract (Solana Devnet):** [`3ChG4eL5EvhrELWbAZs3cdVt8P9X1CfrRwfF6gqfKG9d`](https://explorer.solana.com/address/3ChG4eL5EvhrELWbAZs3cdVt8P9X1CfrRwfF6gqfKG9d?cluster=devnet)
+- **Full walkthrough video (1 min):** [`public/walkthrough/walkthrough.mp4`](public/walkthrough/walkthrough.mp4)
+- **Detailed write-up:** [`PROJECT_OVERVIEW.txt`](PROJECT_OVERVIEW.txt)
 
 ---
 
-## MVP product rules (locked)
+## The problem
 
-| Rule | Detail |
+Families facing rare disease treatment turn to crowdfunding, but:
+
+1. **Donors can't tell which stories are real.**
+2. **Campaigns ask for the wrong amount**, often the full cost even when insurance already covers part of it.
+3. **Money goes to a personal account**, with no guarantee it's spent on treatment.
+4. **Patients have to post private medical details publicly** to be believed.
+
+## How RareDiseaseCF fixes it
+
+| Problem | Fix |
 |---|---|
-| Funding gap | Whole healthcare gap = cost − assistance − patient contribution (server-calculated) |
-| Verification | Whitelisted **hospital institutional email** receives a secure magic link; hospital staff verifies the case |
-| Trust badge | After hospital verification + payout wallet capture: **Verified by `name@hospital.org`** |
-| Case / campaign ID | **5-letter** opaque ID (e.g. `K7MQP`); legacy `RD-*` IDs still readable |
-| Escrow | Milestone unlocks **25 / 50 / 75 / 100** — never auto-transfer on % alone |
-| Settlement | Eligible milestone → approve → settle: USDC goes from on-chain escrow straight to the hospital's wallet (fiat payout coming soon) |
-| Privacy | No PHI, prescriptions, or bank credentials on-chain |
+| Trust | The patient's **own hospital verifies the case** through a single-use link sent to a whitelisted hospital email. Verified campaigns show "Verified by name@hospital". |
+| Wrong amount | The server calculates the goal: **treatment cost − insurance/assistance − patient contribution**. The hospital confirms it and it's locked. |
+| Misuse | Donations go into a **per-campaign escrow controlled by the smart contract**. Each 25% raised is sent **straight to the hospital's wallet**; nobody on the team can withdraw. |
+| Privacy | Medical documents are **encrypted and seen only by the verifying hospital**. The public sees the goal, progress and payouts. **No health data goes on-chain.** |
 
-### Roles
+## How it works
 
-1. **Creator** — submit case + documents  
-2. **Hospital verifier** — magic-link portal  
-3. **Platform admin** — whitelist hospitals, monitor, approve milestones  
-4. **Donor** — browse / donate  
+1. **Submit privately.** A patient or caregiver enters treatment, cost, assistance, the hospital's email, documents and an optional campaign photo. No crypto wallet needed.
+2. **Hospital verifies.** The hospital opens a signed, single-use link (valid 24 h), reviews the documents, confirms the numbers and adds the Solana wallet that will receive funds.
+3. **Campaign goes live.** The goal is locked and the server creates the campaign's escrow on Solana, bound to the hospital's wallet.
+4. **Donors give USDC** from Phantom or Solflare, optionally anonymously. The server checks every donation on-chain before counting it.
+5. **Hospital gets paid automatically.** When the amount raised crosses 25%, 50%, 75% or 100%, the smart contract sends that share to the hospital. Each payout links to its Solana transaction.
+6. **Campaigns end after 180 days.** Anything raised but not yet paid goes to the hospital, so funds can never get stuck.
 
-Legacy wallet **reviewer** routes still exist until the hospital link flow fully replaces them.
+Everything appears on a public **Transparency** page: a plain-language timeline, milestone payouts and a donor leaderboard, with no medical details.
 
-### Networks
+## What the smart contract enforces
 
-There is no simulated money path. The app runs on **Solana Devnet** or **Solana Mainnet** (`SOLANA_CLUSTER` + `VITE_SOLANA_NETWORK`). Every donation is a real USDC transfer into the campaign's on-chain escrow, verified by the API; every payout is an on-chain transaction to the hospital's wallet. Card/fiat donations and fiat payouts are "coming soon" and are rejected by the API.
+- Money can only go to the **hospital wallet registered for that campaign**.
+- Payout amounts are computed on-chain (a milestone share, or the remaining balance after expiry), **never chosen by the caller**.
+- Milestone payouts and expiry releases are **permissionless**: anyone can trigger them, but the destination is fixed, so the server can't redirect funds.
+- The same milestone **can't be paid twice**, and total payouts can't exceed what was raised.
+- **No patient data** is stored on-chain.
 
-In development only, if `SMTP_HOST` is not set, the hospital verify link is logged to the API console instead of emailed.
-
-**Testing on Devnet:** enter `aa@aa.aa` as the institution email. After submitting, a popup shows the hospital's verification email with its single-use link, so a tester can play the hospital. The test inbox is disabled on `mainnet-beta` (the server rejects it and deactivates the test hospital), because it would let anyone verify their own campaign.
+Source: [`onchain/programs/rarediseasecf`](onchain/programs/rarediseasecf) (Rust, Anchor).
 
 ---
 
-## Day 10 — Security pass, polish, deploy checklist
+## Try it (demo script)
 
-> **Status:** MVP. Production limitations are explicit.
+Runs on **Solana Devnet**: test USDC with no real value.
 
-- Full env list: [`docs/ENV.md`](docs/ENV.md) · template: [`.env.example`](.env.example)
+1. **Submit a case** at `/submit`. For the hospital email, use **`aa@aa.aa`**, the built-in test hospital inbox (Devnet only).
+2. After submitting, a popup shows the **hospital's verification email**. Open the link, review the documents, choose **USDC payout**, paste a Devnet wallet address and **approve**.
+3. The campaign appears on **`/campaigns`** with the verified badge.
+4. **Donate** at least 25% of the goal with a Devnet wallet. The 25% milestone is **sent to the hospital automatically** and shows **Sent · View on Solana**.
+5. Open **`/transparency`** to see the timeline and the payout, with no documents or medical details shown.
 
-### Gate
+Donor wallet setup: Devnet SOL from [faucet.solana.com](https://faucet.solana.com), and Devnet USDC (mint `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`) from [faucet.circle.com](https://faucet.circle.com).
+
+## Run it locally
+
+Requirements: Node.js 20.19+ or 22.12+, Docker (for PostgreSQL).
+
+```powershell
+cp .env.example .env
+npm install
+npm run db:up        # PostgreSQL in Docker
+npm run db:migrate
+npm run dev          # web app on http://localhost:5173, API on :8787
+```
+
+Fill in `.env` before starting:
+
+- **`DATA_ENCRYPTION_KEY`**: generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+- **`PLATFORM_AUTHORITY_SECRET_KEY`**: a server-only Solana keypair that signs escrow actions. Never put it in a `VITE_*` variable.
+- The Devnet program ID and USDC mint are already set in `.env.example`.
+
+Using a new platform key or cluster? Initialise it once with `onchain/scripts/devnet-init-platform.ts`, then `devnet-upsert-registries.ts`. Every variable is documented in [`docs/ENV.md`](docs/ENV.md).
+
+Without SMTP configured, hospital verification links are printed in the API log instead of emailed.
+
+## Architecture
+
+```
+React + Vite (web)  ──HTTPS/JSON──▶  Express API (Node, TypeScript)  ──SQL──▶  PostgreSQL
+        │                                    │
+        └── donor wallet signs ──▶  Solana program (Anchor)  ◀── server relayer signs
+                                    per-campaign USDC escrow        milestone payouts
+```
+
+| Layer | Tech |
+|---|---|
+| Web app | React 18, TypeScript, Vite, React Router, Solana Wallet Adapter (Phantom, Solflare) |
+| API | Node.js, Express, Drizzle ORM, Multer, AES-256-GCM encryption, HMAC-signed magic links |
+| Database | PostgreSQL (Docker Compose locally) |
+| Smart contract | Solana, Anchor (Rust), SPL Token (USDC) |
+
+## Security and privacy
+
+- Case details, documents and hospital payout details are **encrypted at rest** (AES-256-GCM).
+- Hospital links are **HMAC-signed, single-use, expire within 24 hours** and are bound to one case and one email. Personal email domains (Gmail, Outlook…) can't act as a hospital.
+- Uploads are checked by **actual file contents**, not just extension. Campaign photos have **GPS and camera metadata stripped**.
+- Public APIs use an **explicit field allowlist**, so internal IDs, wallets and medical text can't leak by accident.
+- The platform signing key **lives only on the server**; the web app holds no private keys.
+- Rate limiting on submissions, verification links, donations and admin actions.
+
+## Tests
 
 ```powershell
 npm run typecheck
-npm run test:server
+npm run test:server      # 108 tests: funding-gap math, milestone rules, double/over-payout
+                         # protection, on-chain donation verification, magic links, security
+cd onchain; npm run validate:linux-docker   # Anchor build + program tests (Docker)
 ```
 
-Full checklist: [`docs/day10-security-deploy.md`](docs/day10-security-deploy.md)
+## Project layout
 
-### Security (summary)
-
-- Role checks: admin secret (timing-safe), hospital magic-link, reviewer session, case-access cookie
-- Uploads: ≤5 MiB, PDF/PNG/JPG, MIME + magic-byte sniff, 2–8 docs
-- Tokens: HMAC, ≤24h, single-use, case+email bound
-- Frontend: no private keys — only public `VITE_*` RPC/program/mint
-
-### Tests covered
-
-Gap calc · milestones (threshold / double settle / over-settle) · settle references · on-chain donation verification (amount, missing/fake tx) · cluster config (devnet / mainnet-beta only) · email blacklist · hospital whitelist
-
-### Deploy path (short)
-
-1. Managed Postgres + `npm run db:migrate`
-2. Host API with real `ADMIN_SECRET` + `DATA_ENCRYPTION_KEY`; frontend via Vercel (or similar) with `APP_ORIGIN`
-3. Set `SOLANA_CLUSTER`, `USDC_MINT`, `PLATFORM_AUTHORITY_SECRET_KEY` (API) and matching `VITE_SOLANA_NETWORK`, `VITE_USDC_MINT` (frontend); initialise the platform on that cluster (`onchain/scripts/devnet-init-platform.ts` + `devnet-upsert-registries.ts`)
-
-### Production limitations
-
-Not a certified healthcare system. Documents are stored encrypted on local disk (`CASE_UPLOAD_DIR`). Fiat payouts (Circle / MoonPay) are not wired yet.
-
----
-
-## Local walkthrough
-
-### Setup (once)
-
-```powershell
-cp .env.example .env
-npm install
-npm run db:up
-npm run db:migrate
-npm run dev
+```
+src/        React web app (pages, components, Solana transaction builders)
+server/     Express API (cases, hospitals, campaigns, donations, milestones, escrow relayer)
+onchain/    Solana program (Anchor/Rust), tests and Devnet scripts
+docs/       Environment reference, walkthrough media, development log
 ```
 
-Local default admin secret: `rdcf-demo-admin` (`ADMIN_SECRET` in `.env`).
+## Status
 
-1. `/submit` — create a case (documents + optional cover image). The hospital verify link is logged by the API in development.
-2. Open the verify link — hospital approves, picks USDC payout wallet; campaign publishes.
-3. `/campaigns/:id` — donate; `/admin/hospitals` — approve + settle eligible milestones.
-4. `/transparency/:id` — public timeline and donor leaderboard.
+- **Real:** the full app, API and database; hospital verification; USDC donations, milestone payouts and expiry payouts as real transactions on **Solana Devnet**. Nothing is simulated.
+- **Coming soon** (labelled in the app): card/fiat donations, bank payouts for hospitals.
+- **Not** a certified healthcare system. On Devnet, use synthetic data and test wallets only.
 
-### Transparency APIs
-
-| Method | Path |
-|---|---|
-| `GET` | `/api/public/transparency/campaigns` |
-| `GET` | `/api/public/transparency/campaigns/:campaignId` |
-| `GET` | `/api/public/leaderboard?campaignId=` |
-
----
-
-## Day 10 — Settlement
-
-> **On-chain:** `donate_usdc`, `confirm_fulfillment`, and `release_provider_payment` are implemented in `onchain/`. Settlement pays **exactly** `verified_funding_gap` USDC from the campaign vault PDA to the **immutable** registered provider wallet, once, after fulfillment. No patient wallet path. No PHI on chain.
-
-> **App:** Reviewer settlement card records a real tx signature and shows a Solana Explorer link (Devnet when configured). Backend is not the source of truth for balances.
-
-### State sequence
-
-`Approved` → full funding via `donate_usdc` → `confirm_fulfillment` (provider) → `release_provider_payment` (platform admin) → `Settled`
-
-### Exact payment / one-time / destination rules
-
-- Transfer amount is always the locked `verified_funding_gap` (no caller-supplied amount).
-- Second settle fails with `CampaignAlreadySettled`.
-- Destination token account must be owned by `campaign.provider_wallet` for `campaign.usdc_mint`.
-
-### Tests
-
-```powershell
-cd onchain
-npm run validate:linux-docker
-```
-
-### Limitations
-
-Devnet/demo only; synthetic data; not production healthcare infrastructure; no claim of compliance or real-money custody readiness.
-
----
-
-## Day 9 — SBF / localnet blocker isolation
-
-> **Day 9 status (honest):** Linux **`anchor build` PASS** (Solana 2.1.0 image + dependency pins). Last validate failed only on TS test runner (`Unknown file extension ".ts"` with `"type": "module"`). Fix applied (removed ESM type; quoted mocha glob). Re-running `anchor test`.
-
-See:
-
-- [`onchain/docs/day9-sbf-blocker.md`](onchain/docs/day9-sbf-blocker.md) — precise blocker + paths
-- [`onchain/docs/linux-wsl2-setup.md`](onchain/docs/linux-wsl2-setup.md) — Ubuntu WSL2 setup
-- `onchain/scripts/validate-linux-docker.ps1` — Docker Linux `anchor build` + `anchor test`
-
-```powershell
-cd onchain
-npm run validate:linux-docker
-```
-
-Re-run until Linux `anchor build` and `anchor test` both PASS before treating Day 9 as complete.
-
----
-
-## Day 10 — Settlement status
-
-On-chain settlement instructions are in `onchain/`. Green Day 9 Linux `anchor test` is still required before claiming the full Day 9/10 gate.
-
----
-
-## Day 8 — Anchor SBF / localnet validation gate
-
-> **Day 8 status:** Day 8 validates the metadata-only Anchor program in a Linux-compatible Solana development environment. The next payment milestone must not begin until Anchor SBF compilation and localnet tests pass. **Windows host-side `cargo check` does not replace successful Solana SBF compilation and localnet Anchor tests.**
-
-### Required Linux gate (Day 9)
-
-```text
-Required Linux gate (Day 9):
-[ ] anchor build succeeds (WSL2 or Docker)
-[ ] anchor test succeeds
-[ ] expected localnet tests pass
-[ ] generated IDL is reviewed
-[ ] no private/medical fields exist in account definitions
-[ ] no transfer/escrow/donation instruction exists
-[ ] no program deployment claim is made unless actually deployed
-```
-
-Setup guide: [`onchain/docs/linux-wsl2-setup.md`](onchain/docs/linux-wsl2-setup.md)
-
-Host-only helper (does **not** prove SBF build):
-
-```bash
-npm run onchain:check
-```
-
----
-
-## Day 7 — Anchor campaign metadata program
-
-> **Day 7 status:** An isolated Anchor workspace under `onchain/` supports platform config, verifier/provider registries, and campaign PDA create/approve on localnet. **No donations, escrow, or token transfers.** No patient data is written on-chain. The Vite/Express app is **not** wired to this program yet; public UI must not claim on-chain proof.
-
-
-### What Day 7 adds
-
-- Anchor program scaffold (`onchain/programs/rarediseasecf`)
-- Instructions: `initialize_platform`, `upsert_verifier`, `upsert_provider`, `create_campaign`, `approve_campaign`
-- On-chain campaign stores only opaque ID, status, verifier/provider wallets, USDC mint, verified funding gap, amount raised (0), expiry
-- Localnet Anchor tests (when Solana/Anchor toolchain is installed)
-- Manual Devnet deploy runbook only — no automatic deployment, no keys in repo
-
-### What Day 7 does not do
-
-- No USDC/SOL transfers, vaults, or donation UI transactions
-- No backend/frontend sync of on-chain campaigns
-- No “View on-chain proof” or explorer links in the public app
-- No production / compliance / escrow claims
-
-See [`onchain/README.md`](onchain/README.md) for PDA seeds, privacy rules, and build commands.
-
----
-
-## Day 6 — Campaign publication (public browse)
-
-> **Day 6 status:** Reviewers can explicitly publish an approved private campaign draft. Public list/detail APIs and pages read only `PUBLISHED` campaigns with a safe allowlisted serializer. Donation UI remains a non-payment preview. No Solana transactions.
-
-### What Day 6 adds
-
-- Separate reviewer **Publish campaign** action (approval alone does not publish)
-- Real public campaign APIs: `GET /api/public/campaigns` and `GET /api/public/campaigns/:campaignId`
-- Database-backed `/campaigns` and `/campaigns/:campaignId` pages
-- Public-safe campaign serializer (explicit allowlist)
-- Campaign publication audit events
-- Replacement of static mock campaigns on production routes
-- Donation amount + wallet confirmation UI still cannot move funds
-
-### Public privacy model
-
-**Public:** opaque campaign reference, generic title/summary, provider display name, verified funding goal, amount raised (always `0` in Day 6), remaining, funding percent (`0`), expiry, publication time.
-
-**Private:** patient identity, care summary, documents, diagnosis, reviewer identity, provider payout wallet, case-access / session tokens, encrypted payloads, internal UUIDs.
-
-### Reviewer publication test
-
-1. Submit a synthetic case from `/submit`
-2. Reviewer approves it (Day 5 path) → draft stays `APPROVED_NOT_PUBLISHED`
-3. Open the approved case → **Campaign publication** card → confirm **Publish campaign**
-4. Visit `/campaigns` and open the public campaign
-5. Confirm no private treatment narrative, wallets, or documents appear
-6. Confirm **Donation checkout coming next** stays disabled
-
-### Public campaign test
-
-1. Browse `/campaigns` with **no** wallet connected
-2. Select a donation amount — only local UI changes
-3. Connect/confirm a Devnet wallet — ownership message only; no funds move
-4. No transaction approval / USDC transfer appears
-5. Funding remains `0 USDC` / `0%`
-
-### Security boundaries
-
-- Publication is separate from approval and requires an active allowlisted reviewer session
-- Public serializer uses an explicit allowlist (never spreads DB rows)
-- Unpublished / unknown campaigns return the same public `404`
-- Day 6 public APIs remain off-chain only (Day 7 Anchor program is a separate `onchain/` workspace, not wired here yet)
-
-### Limitations
-
-- Public campaigns are Devnet-demo publication only
-- No donation transfer, on-chain escrow, provider confirmation, payout, or refunds
-- No unpublish / expiry automation
-- All case data remains synthetic
-
----
-
-## Day 5 — Reviewer workspace (private approval)
-
-> **Day 5 status:** Allowlisted Devnet reviewer wallets can confirm ownership, review private submitted cases, request clarification, reject, or approve. Approval atomically locks funding fields and creates a private campaign draft (`APPROVED_NOT_PUBLISHED`). Newly approved drafts are **not** public until Day 6 publication. No Solana transactions.
-
-
-### What Day 5 adds
-
-- Reviewer-specific wallet confirmation (separate from donor auth)
-- PostgreSQL `reviewer_registry` + `provider_registry` (bootstrap from env)
-- Durable HTTP-only reviewer sessions (`rdcf_reviewer_session`)
-- Reviewer-only case list/detail APIs with server-side decryption after auth
-- Structured clarification / rejection reason codes (no free-text medical notes)
-- Server-validated funding gap: `approved cost − verified assistance − contribution`
-- Immutable private campaign draft on approval (atomic transaction)
-- Patient status pages for new case states
-- No public campaign publication yet
-
-### Environment variables
-
-| Variable | Purpose |
-|---|---|
-| `REVIEWER_BOOTSTRAP_WALLETS` | Comma-separated allowlisted reviewer public keys |
-| `PROVIDER_BOOTSTRAP_RECORDS` | JSON array of `{ displayName, payoutWalletAddress }` |
-| `REVIEWER_SESSION_COOKIE_NAME` | Default `rdcf_reviewer_session` |
-| `REVIEWER_SESSION_TTL_HOURS` | Default `8` |
-
-### Local reviewer setup
-
-1. Create or choose a **separate** Devnet test wallet for reviewer use.
-2. Put only its **public** address in `REVIEWER_BOOTSTRAP_WALLETS`.
-3. Create or choose a **separate** Devnet wallet for the demo provider payout destination.
-4. Put only its public address in `PROVIDER_BOOTSTRAP_RECORDS` (JSON).
-5. **Never** place a private key or seed phrase in `.env`.
-6. Run `npm run db:migrate` and restart the API after changing bootstrap config.
-
-```bash
-REVIEWER_BOOTSTRAP_WALLETS=YourReviewerPublicKey
-PROVIDER_BOOTSTRAP_RECORDS=[{"displayName":"DemoCare Specialty Pharmacy","payoutWalletAddress":"YourProviderPublicKey"}]
-```
-
-### Reviewer test path
-
-1. Submit a synthetic case from `/submit`
-2. Open `/reviewer` with the allowlisted reviewer wallet
-3. Click **Confirm reviewer account** and approve the message (no funds move)
-4. Open the submitted case
-5. Approve with cost `5000`, assistance `2000`, contribution `500` → expected gap `2500`
-6. Choose the active demo provider and a valid expiry (≥24h, ≤90 days)
-7. **Approve and prepare campaign**
-8. Confirm patient `/submit/status/...` shows approved private state
-9. Confirm `/campaigns` does **not** show the draft until Day 6 publication
-10. Confirm no on-chain transaction occurred
-
-### Security boundaries
-
-- Reviewer APIs are deny-by-default and require an active allowlisted session
-- Donor session cookies never grant reviewer access
-- Frontend route guards are UX only
-- Approval math is server-side; client preview is not authoritative
-- Approval + draft + status update are one DB transaction
-- Campaign drafts store no treatment summary / patient identity
-- Provider payout wallet is never shown on public pages
-- No Solana transfer / program / Anchor code
-
-### Limitations
-
-- Bootstrap registries are hackathon/dev configuration only
-- No admin UI to manage reviewers/providers
-- No provider authentication or portal
-- Public publication is handled by admin publish after hospital verify
-- Local document upload + token-gated hospital download
-- All data remains synthetic
-
----
-
-## Day 4 — Private case intake (PostgreSQL)
-
-Patients/caregivers submit synthetic private cases through `/submit`. Narrative fields are AES-256-GCM encrypted. HTTP-only case-access cookies grant owner status views only.
-
-```bash
-cp .env.example .env
-# set DATA_ENCRYPTION_KEY, REVIEWER_BOOTSTRAP_WALLETS, PROVIDER_BOOTSTRAP_RECORDS
-npm install
-npm run db:up
-npm run db:migrate
-npm run dev
-```
-
----
-
-## Day 3 — Wallet ownership confirmation (Devnet)
-
-Donor wallet confirmation remains separate from reviewer auth. Donor sessions stay in-memory.
-
----
-
-## Routes
-
-| Path | Description |
-|---|---|
-| `/` | Public homepage |
-| `/campaigns` | Browse published campaigns |
-| `/campaigns/:campaignId` | Campaign detail + donate UX |
-| `/submit` | Private case intake (docs + hospital email) |
-| `/submit/status` | Owner case status via case-access cookie |
-| `/submit/status/:publicCaseId` | Owner case status |
-| `/verify/:token` | Hospital magic-link verify portal |
-| `/admin/hospitals` | Hospital whitelist + publish drafts |
-| `/transparency` | Public timeline, updates, donor leaderboard |
-| `/transparency/:campaignId` | Campaign-scoped transparency |
-| `/reviewer` | Legacy reviewer workspace (gated) |
-| `/reviewer/cases/:publicCaseId` | Reviewer case detail (authorized only) |
-
-### Hospital verify API
-
-| Method | Path |
-|---|---|
-| `GET` | `/api/hospital/reasons` |
-| `GET` | `/api/hospital/verify/:token` |
-| `GET` | `/api/hospital/verify/:token/documents/:documentId` |
-| `POST` | `/api/hospital/verify/:token/approve` |
-| `POST` | `/api/hospital/verify/:token/reject` |
-| `GET` | `/api/admin/hospitals` |
-| `POST` | `/api/admin/hospitals` |
-| `DELETE` | `/api/admin/hospitals/:id` |
-| `GET` | `/api/admin/campaigns` |
-| `POST` | `/api/admin/campaigns/:campaignId/publish` |
-
-### Reviewer API routes
-
-| Method | Path |
-|---|---|
-| `POST` | `/api/reviewer/auth/challenge` |
-| `POST` | `/api/reviewer/auth/verify` |
-| `GET` | `/api/reviewer/auth/session` |
-| `POST` | `/api/reviewer/auth/logout` |
-| `GET` | `/api/reviewer/cases` |
-| `GET` | `/api/reviewer/cases/:publicCaseId` |
-| `POST` | `/api/reviewer/cases/:publicCaseId/request-clarification` |
-| `POST` | `/api/reviewer/cases/:publicCaseId/reject` |
-| `POST` | `/api/reviewer/cases/:publicCaseId/approve` |
-
-Local document uploads land under `CASE_UPLOAD_DIR` (default `data/case-uploads`). Hospital approve seeds **LOCKED** milestones at 25/50/75/100. Donations auto-flip **ELIGIBLE** when raised ≥ threshold; admin **Approve** → **Settle (send USDC)** on `/admin/hospitals` — never auto-transfer. On-chain custody: `settle_milestone` + `release_expired_funds` (see [`onchain/README.md`](onchain/README.md)), signed by the server relayer — see [`docs/ENV.md`](docs/ENV.md#on-chain-escrow-required--server-only). Campaigns run 90 days; at expiry everything raised but unsettled goes to the hospital.
-
-### Day 6 milestone APIs
-
-| Method | Path |
-|---|---|
-| `GET` | `/api/admin/campaigns/published/milestones` |
-| `GET` | `/api/admin/campaigns/:campaignId/milestones` |
-| `POST` | `/api/admin/campaigns/:campaignId/milestones/:percent/approve` |
-| `POST` | `/api/admin/campaigns/:campaignId/milestones/:percent/settle` |
-| `POST` | `/api/admin/campaigns/:campaignId/settle-highest` |
-
-Acceptance: raise to 50% → 25+50 `ELIGIBLE`, 75 still `LOCKED`. Public campaign detail shows the tracker from server state.
-
----
-
-## Privacy
-
-Do not enter real patient names, medical records, prescriptions, diagnoses, addresses, emails, phone numbers, or document hashes. Narrative case fields are encrypted at rest. Wallet addresses are truncated in the UI. Provider payout wallets are reviewer-only (truncated).
-
----
-
-## Disclaimer
-
-On **Devnet**, use test wallets and synthetic data only — Devnet USDC has no value. Before running on **Mainnet**, complete the mainnet checklist (program deploy/audit, hosting, legal review); mainnet donations are real money.
+The day-by-day build history is in [`docs/devlog.md`](docs/devlog.md).
