@@ -17,7 +17,7 @@ export async function runStartupBootstrap(
   const hospitalsBootstrapped = await bootstrapHospitals(
     stores.dbHandle.db,
     config.hospitalBootstrapRecords,
-    { includeTestHospital: testHospitalEnabled(config.solana.cluster) }
+    { includeDemoHospitals: testHospitalEnabled(config.solana.cluster) }
   )
   if (config.reviewerBootstrapWallets.length === 0) {
     console.warn(

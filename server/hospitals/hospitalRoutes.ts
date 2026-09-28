@@ -93,6 +93,7 @@ export function createHospitalRouter(
           'Content-Disposition',
           `attachment; filename="${file.originalFilename.replace(/"/g, '')}"`
         )
+        res.setHeader('X-Content-Type-Options', 'nosniff')
         res.setHeader('Cache-Control', 'no-store')
         res.status(200).send(file.buffer)
       } catch (err) {

@@ -33,6 +33,14 @@ function isSolanaAddress(value: string): boolean {
   }
 }
 
+/**
+ * Off-curve addresses (program-derived accounts) have no private key, so no
+ * standard USDC account can be derived for them and payouts would be stuck.
+ */
+function isWalletAddress(value: string): boolean {
+  return PublicKey.isOnCurve(new PublicKey(value).toBytes())
+}
+
 export function validatePayoutSelection(raw: {
   payoutMethod?: unknown
   usdcWalletAddress?: unknown
@@ -72,6 +80,13 @@ export function validatePayoutSelection(raw: {
     throw new AppError(
       'INVALID_USDC_WALLET',
       'Enter a valid Solana wallet address (base58, 32–44 characters).',
+      400
+    )
+  }
+  if (!isWalletAddress(walletAddress)) {
+    throw new AppError(
+      'INVALID_USDC_WALLET',
+      'This address is a program account, not a wallet. Enter the institution’s own Solana wallet address (for example from Phantom or Solflare).',
       400
     )
   }

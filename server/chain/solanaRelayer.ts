@@ -112,6 +112,33 @@ export function measureVaultDeposit(
   return delta > 0n ? delta : 0n
 }
 
+/** `CampaignStatus::Approved` enum index in the on-chain program. */
+const CAMPAIGN_STATUS_APPROVED = 1
+
+/**
+ * Read status, payout wallet and goal from a Campaign account.
+ * Layout: 8-byte discriminator, campaign_id (u32 len + bytes), status (u8),
+ * verifier_wallet, provider_wallet, usdc_mint (32 bytes each), verified_funding_gap (u64).
+ */
+export function decodeCampaignTerms(data: Buffer): {
+  status: number
+  providerWallet: string
+  verifiedFundingGap: bigint
+} | null {
+  try {
+    const idLen = data.readUInt32LE(8)
+    let offset = 12 + idLen
+    const status = data.readUInt8(offset)
+    offset += 1 + 32
+    const providerWallet = new PublicKey(data.subarray(offset, offset + 32)).toBase58()
+    offset += 32 + 32
+    const verifiedFundingGap = data.readBigUInt64LE(offset)
+    return { status, providerWallet, verifiedFundingGap }
+  } catch {
+    return null
+  }
+}
+
 export class SolanaRelayer {
   readonly connection: Connection
   readonly cluster: string
@@ -192,7 +219,21 @@ export class SolanaRelayer {
     expiresAtUnix: number
   }): Promise<{ signature: string | null; alreadyExisted: boolean }> {
     const campaign = this.campaignPda(input.campaignId)
-    if (await this.connection.getAccountInfo(campaign)) {
+    const existing = await this.connection.getAccountInfo(campaign)
+    if (existing) {
+      const onchain = decodeCampaignTerms(existing.data)
+      if (
+        !onchain ||
+        onchain.status !== CAMPAIGN_STATUS_APPROVED ||
+        onchain.providerWallet !== input.providerWallet ||
+        onchain.verifiedFundingGap !== input.verifiedFundingGapMinor
+      ) {
+        throw new AppError(
+          'CAMPAIGN_ONCHAIN_CONFLICT',
+          'An on-chain campaign with this ID already exists with a different payout wallet or goal. Approve with the wallet used the first time, or contact the platform team.',
+          409
+        )
+      }
       return { signature: null, alreadyExisted: true }
     }
 

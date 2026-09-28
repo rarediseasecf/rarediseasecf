@@ -131,7 +131,7 @@ React + Vite (web)  ──HTTPS/JSON──▶  Express API (Node, TypeScript)  �
 
 ```powershell
 npm run typecheck
-npm run test:server      # 108 tests: funding-gap math, milestone rules, double/over-payout
+npm run test:server      # 111 tests: funding-gap math, milestone rules, double/over-payout
                          # protection, on-chain donation verification, magic links, security
 cd onchain; npm run validate:linux-docker   # Anchor build + program tests (Docker)
 ```

@@ -3,6 +3,7 @@
  */
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { PublicKey } from '@solana/web3.js'
 import { AppError } from '../errors.js'
 import { validatePayoutSelection } from './payoutValidation.js'
 
@@ -55,5 +56,20 @@ describe('hospital payout selection', () => {
         hasCode('INVALID_USDC_WALLET')
       )
     }
+  })
+
+  it('rejects program-derived (off-curve) addresses', () => {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('vault')],
+      new PublicKey(VALID_WALLET)
+    )
+    assert.throws(
+      () =>
+        validatePayoutSelection({
+          payoutMethod: 'USDC',
+          usdcWalletAddress: pda.toBase58(),
+        }),
+      hasCode('INVALID_USDC_WALLET')
+    )
   })
 })

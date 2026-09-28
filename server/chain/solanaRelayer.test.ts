@@ -5,7 +5,11 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { Keypair, PublicKey, type ParsedTransactionWithMeta } from '@solana/web3.js'
 import bs58 from 'bs58'
-import { measureVaultDeposit, parseSecretKey } from './solanaRelayer.js'
+import {
+  decodeCampaignTerms,
+  measureVaultDeposit,
+  parseSecretKey,
+} from './solanaRelayer.js'
 import { AppError } from '../errors.js'
 
 const PROGRAM = '3ChG4eL5EvhrELWbAZs3cdVt8P9X1CfrRwfF6gqfKG9d'
@@ -120,5 +124,36 @@ describe('parseSecretKey', () => {
         err.code === 'PLATFORM_KEY_INVALID' &&
         !err.message.includes('not-a-key')
     )
+  })
+})
+
+describe('decodeCampaignTerms', () => {
+  it('reads status, provider wallet and goal from the account layout', () => {
+    const id = Buffer.from('AB12C')
+    const idLen = Buffer.alloc(4)
+    idLen.writeUInt32LE(id.length)
+    const provider = Keypair.generate().publicKey
+    const gap = Buffer.alloc(8)
+    gap.writeBigUInt64LE(18_000_000n)
+    const data = Buffer.concat([
+      Buffer.alloc(8),
+      idLen,
+      id,
+      Buffer.from([1]),
+      Keypair.generate().publicKey.toBuffer(),
+      provider.toBuffer(),
+      new PublicKey(MINT).toBuffer(),
+      gap,
+      Buffer.alloc(40),
+    ])
+    assert.deepEqual(decodeCampaignTerms(data), {
+      status: 1,
+      providerWallet: provider.toBase58(),
+      verifiedFundingGap: 18_000_000n,
+    })
+  })
+
+  it('returns null for truncated data', () => {
+    assert.equal(decodeCampaignTerms(Buffer.alloc(20)), null)
   })
 })

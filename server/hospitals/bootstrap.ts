@@ -1,7 +1,8 @@
 /**
- * Day 1 — seed fictional hospital whitelist (institutional domains only).
+ * Seed the hospital whitelist: env-configured institutions everywhere, plus
+ * fictional demo institutions and the test inbox on Devnet only.
  */
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { hospitalWhitelist } from '../db/schema.js'
 import { isPersonalEmailDomain } from './emailPolicy.js'
@@ -13,7 +14,10 @@ export interface HospitalBootstrapRecord {
   contactEmail: string
 }
 
-/** Always seeded so Demo Mode has institutions without env config. */
+/**
+ * Fictional institutions, seeded on Devnet only. Their domains are not ours, so
+ * on a real-money network whoever registers one could verify their own case.
+ */
 export const DEFAULT_DEMO_HOSPITALS: HospitalBootstrapRecord[] = [
   {
     displayName: 'DemoCare Specialty Hospital',
@@ -83,23 +87,23 @@ export function parseHospitalBootstrapRecords(
 export async function bootstrapHospitals(
   db: Database['db'],
   extra: HospitalBootstrapRecord[] = [],
-  options: { includeTestHospital: boolean } = { includeTestHospital: false }
+  options: { includeDemoHospitals: boolean } = { includeDemoHospitals: false }
 ): Promise<number> {
   const now = new Date()
-  const records = [
-    ...DEFAULT_DEMO_HOSPITALS,
-    ...extra,
-    ...(options.includeTestHospital ? [TEST_HOSPITAL] : []),
-  ]
+  const demo = [...DEFAULT_DEMO_HOSPITALS, TEST_HOSPITAL]
+  const records = options.includeDemoHospitals ? [...demo, ...extra] : extra
   let count = 0
 
-  if (!options.includeTestHospital) {
+  if (!options.includeDemoHospitals) {
     await db
       .update(hospitalWhitelist)
       .set({ isActive: false, updatedAt: now, deactivatedAt: now })
       .where(
         and(
-          eq(hospitalWhitelist.emailDomain, TEST_HOSPITAL.emailDomain),
+          inArray(
+            hospitalWhitelist.emailDomain,
+            demo.map(h => h.emailDomain)
+          ),
           eq(hospitalWhitelist.isActive, true)
         )
       )
