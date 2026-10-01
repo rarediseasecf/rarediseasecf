@@ -22,8 +22,9 @@ import {
 } from '@solana/wallet-adapter-react'
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom'
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare'
+import type { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
 
-import { RPC_URL } from '../lib/network'
+import { RPC_URL, SOLANA_NETWORK } from '../lib/network'
 
 // Cast through React.ElementType to bridge the React 17→18 FC type gap
 // in the wallet-adapter library without disabling strict checking globally.
@@ -38,7 +39,10 @@ export default function WalletConnectionProvider({
   children,
 }: WalletConnectionProviderProps) {
   const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter({ network: SOLANA_NETWORK as WalletAdapterNetwork }),
+    ],
     []
   )
 
