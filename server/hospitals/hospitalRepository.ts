@@ -197,6 +197,23 @@ export class HospitalRepository {
     return row
   }
 
+  async findLatestMagicLinkForCase(
+    caseId: string
+  ): Promise<MagicLinkTokenRow | undefined> {
+    const rows = await this.db
+      .select()
+      .from(magicLinkTokens)
+      .where(
+        and(
+          eq(magicLinkTokens.caseId, caseId),
+          eq(magicLinkTokens.purpose, MAGIC_LINK_PURPOSE)
+        )
+      )
+      .orderBy(desc(magicLinkTokens.createdAt))
+      .limit(1)
+    return rows[0]
+  }
+
   async findMagicLinkByHash(
     tokenHash: string
   ): Promise<MagicLinkTokenRow | undefined> {

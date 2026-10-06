@@ -103,6 +103,20 @@ export interface OwnerCaseView {
   /** The patient's consented public story, or null if not shared / withdrawn */
   publicStory: PublicPatientStoryView | null
   publicStoryWithdrawnAt: string | null
+  /** Present while the case awaits the hospital: the latest verification link */
+  hospitalLink?: HospitalLinkView
+}
+
+export interface HospitalLinkView {
+  sentAt: string
+  expiresAt: string
+  resendAvailableAt: string
+}
+
+export interface ResendHospitalLinkResult {
+  view: OwnerCaseView
+  emailSent: boolean
+  demoInboxEmail?: DemoInboxEmail
 }
 
 export interface CreateCaseResult {

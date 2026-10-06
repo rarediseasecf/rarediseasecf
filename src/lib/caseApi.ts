@@ -50,6 +50,12 @@ export interface OwnerCaseView {
   }
   publicStory: PatientStory | null
   publicStoryWithdrawnAt: string | null
+  /** Present while the case awaits the hospital */
+  hospitalLink?: {
+    sentAt: string
+    expiresAt: string
+    resendAvailableAt: string
+  }
 }
 
 /** Shared publicly only with the patient's or guardian's recorded consent. */
@@ -226,6 +232,19 @@ export async function withdrawPublicStory(): Promise<OwnerCaseView> {
     method: 'POST',
     body: JSON.stringify({}),
   })
+}
+
+export interface ResendHospitalLinkResponse {
+  case: OwnerCaseView
+  emailSent: boolean
+  demoInboxEmail?: DemoInboxEmail
+}
+
+export async function resendHospitalLink(): Promise<ResendHospitalLinkResponse> {
+  return requestJson<ResendHospitalLinkResponse>(
+    '/api/cases/hospital-link/resend',
+    { method: 'POST', body: JSON.stringify({}) }
+  )
 }
 
 export async function revokeCaseAccess(): Promise<void> {

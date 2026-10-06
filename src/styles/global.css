@@ -2730,6 +2730,22 @@ dialog.modal::backdrop {
   padding: .75rem 1rem;
 }
 
+.hospital-link-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .5rem;
+  background: var(--color-teal-light);
+  border: 1px solid var(--color-teal);
+  border-radius: var(--radius-md);
+  padding: .875rem 1rem;
+  margin-bottom: 1rem;
+}
+.hospital-link-box__title { font-size: 1rem; margin: 0; }
+.hospital-link-box__body { font-size: .9rem; margin: 0; }
+.hospital-link-box__hint { font-size: .8125rem; color: var(--color-text-muted); margin: 0; }
+.hospital-link-box__ok { font-size: .875rem; color: var(--color-teal); margin: 0; }
+
 .case-status-panel__actions {
   display: flex;
   flex-wrap: wrap;

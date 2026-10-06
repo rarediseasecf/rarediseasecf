@@ -4,12 +4,16 @@
  */
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import DemoInboxEmailModal from '../components/DemoInboxEmailModal'
 import {
   CaseApiError,
+  DEMO_HOSPITAL_EMAIL,
   fetchCaseByPublicId,
   fetchCurrentCase,
+  resendHospitalLink,
   revokeCaseAccess,
   withdrawPublicStory,
+  type DemoInboxEmail,
   type OwnerCaseView,
 } from '../lib/caseApi'
 
@@ -143,6 +147,39 @@ export default function CaseStatusPage() {
   const [revoking, setRevoking] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
   const [storyError, setStoryError] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState<{
+    kind: 'ok' | 'error'
+    text: string
+  } | null>(null)
+  const [demoInbox, setDemoInbox] = useState<DemoInboxEmail | null>(null)
+
+  async function handleResendHospitalLink() {
+    setResending(true)
+    setResendMessage(null)
+    try {
+      const result = await resendHospitalLink()
+      setState({ phase: 'ready', view: result.case })
+      if (result.demoInboxEmail) {
+        setDemoInbox(result.demoInboxEmail)
+      } else {
+        setResendMessage({
+          kind: 'ok',
+          text: 'A new verification email was sent to the hospital. The previous link no longer works.',
+        })
+      }
+    } catch (err) {
+      setResendMessage({
+        kind: 'error',
+        text:
+          err instanceof CaseApiError
+            ? err.message
+            : 'We could not resend the email. Please try again.',
+      })
+    } finally {
+      setResending(false)
+    }
+  }
 
   async function handleWithdrawStory() {
     if (!window.confirm("Withdraw consent and remove the patient's name, condition and story from the public campaign page? This cannot be undone.")) {
@@ -287,6 +324,22 @@ export default function CaseStatusPage() {
           <StatusPipeline status={view.status} />
           <h1 className="case-status-panel__title">{copy.title}</h1>
           <p className="case-status-panel__body">{copy.body}</p>
+
+          {view.status === 'AWAITING_HOSPITAL' && view.hospitalLink && (
+            <HospitalLinkBox
+              link={view.hospitalLink}
+              email={view.hospitalInstitutionalEmail}
+              isDemo={
+                view.hospitalInstitutionalEmail.toLowerCase() ===
+                DEMO_HOSPITAL_EMAIL
+              }
+              resending={resending}
+              message={resendMessage}
+              onResend={() => {
+                void handleResendHospitalLink()
+              }}
+            />
+          )}
 
           <dl className="case-status-panel__dl">
             <div className="case-status-panel__row">
@@ -472,6 +525,78 @@ export default function CaseStatusPage() {
           </div>
         </div>
       </div>
+
+      <DemoInboxEmailModal email={demoInbox} onClose={() => setDemoInbox(null)} />
     </main>
+  )
+}
+
+function HospitalLinkBox({
+  link,
+  email,
+  isDemo,
+  resending,
+  message,
+  onResend,
+}: {
+  link: NonNullable<OwnerCaseView['hospitalLink']>
+  email: string
+  isDemo: boolean
+  resending: boolean
+  message: { kind: 'ok' | 'error'; text: string } | null
+  onResend: () => void
+}) {
+  const [now, setNow] = useState(() => Date.now())
+  const resendAt = new Date(link.resendAvailableAt).getTime()
+  const expired = new Date(link.expiresAt).getTime() <= now
+  const canResend = now >= resendAt
+
+  useEffect(() => {
+    if (canResend) return
+    const timer = window.setTimeout(() => setNow(Date.now()), resendAt - now + 500)
+    return () => window.clearTimeout(timer)
+  }, [canResend, resendAt, now])
+
+  return (
+    <div className="hospital-link-box">
+      <h2 className="hospital-link-box__title">Hospital verification email</h2>
+      <p className="hospital-link-box__body">
+        {isDemo ? 'Demo verification email for ' : 'Sent to '}
+        <strong>{email}</strong> on {new Date(link.sentAt).toLocaleString()}.{' '}
+        {expired
+          ? 'The link has expired — send a new one so the hospital can respond.'
+          : `The single-use link expires ${new Date(link.expiresAt).toLocaleString()}.`}
+      </p>
+      <button
+        type="button"
+        className="btn btn--ghost btn--sm"
+        disabled={resending || !canResend}
+        onClick={onResend}
+      >
+        {resending
+          ? 'Sending…'
+          : isDemo
+            ? 'Open demo inbox with a new link'
+            : 'Resend email to hospital'}
+      </button>
+      {!canResend && (
+        <p className="hospital-link-box__hint">
+          You can send a new link after{' '}
+          {new Date(link.resendAvailableAt).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+          .
+        </p>
+      )}
+      {message && (
+        <p
+          className={message.kind === 'error' ? 'field-error' : 'hospital-link-box__ok'}
+          role={message.kind === 'error' ? 'alert' : 'status'}
+        >
+          {message.text}
+        </p>
+      )}
+    </div>
   )
 }

@@ -9,6 +9,7 @@ import {
 import { generatePublicCaseId } from '../utils/caseId.js'
 import { AppError } from '../errors.js'
 import { emailDomain } from '../hospitals/emailPolicy.js'
+import { hospitalEmailDeliveryAvailable } from '../hospitals/emailDelivery.js'
 import {
   demoHospitalsEnabled,
   isDemoHospitalEmail,
@@ -45,10 +46,12 @@ import {
   type CreateCaseResult,
   type OwnerCaseView,
   type PrivateCasePayload,
+  type ResendHospitalLinkResult,
 } from './types.js'
 import type { CaseRow } from '../db/schema.js'
 
 const MAX_PUBLIC_ID_ATTEMPTS = 8
+const HOSPITAL_LINK_RESEND_COOLDOWN_MS = 10 * 60 * 1000
 
 export class CaseService {
   constructor(
@@ -88,6 +91,13 @@ export class CaseService {
         'HOSPITAL_NOT_WHITELISTED',
         'That institution email is not on the hospital whitelist. Ask an admin to add the domain or full email, then try again.',
         400
+      )
+    }
+    if (!isDemoInbox && !hospitalEmailDeliveryAvailable(this.config)) {
+      throw new AppError(
+        'HOSPITAL_EMAIL_UNAVAILABLE',
+        'Hospital verification emails are not switched on yet, so this case could not reach the hospital. Nothing was submitted — please try again later.',
+        503
       )
     }
 
@@ -300,13 +310,116 @@ export class CaseService {
         publication = serializeCampaignPublicationFromDraft(draft)
       }
     }
-    return serializeOwnerCaseView(
+    const view = serializeOwnerCaseView(
       row,
       privatePayload,
       docs.map(serializeDocumentView),
       locked,
       publication
     )
+    if (row.status === CASE_STATUS.AWAITING_HOSPITAL) {
+      const link = await this.hospitalRepo.findLatestMagicLinkForCase(row.id)
+      if (link) {
+        view.hospitalLink = {
+          sentAt: link.createdAt.toISOString(),
+          expiresAt: link.expiresAt.toISOString(),
+          resendAvailableAt: new Date(
+            link.createdAt.getTime() + HOSPITAL_LINK_RESEND_COOLDOWN_MS
+          ).toISOString(),
+        }
+      }
+    }
+    return view
+  }
+
+  async resendHospitalLink(
+    rawToken: string | undefined
+  ): Promise<ResendHospitalLinkResult> {
+    const now = new Date()
+    const session = rawToken
+      ? await this.repo.findActiveAccessByTokenHash(hashToken(rawToken), now)
+      : undefined
+    if (!session) {
+      throw new AppError('CASE_ACCESS_REQUIRED', 'You do not have access to this case.', 401)
+    }
+    const row = session.caseRow
+    if (row.status !== CASE_STATUS.AWAITING_HOSPITAL) {
+      throw new AppError(
+        'CASE_NOT_AWAITING_HOSPITAL',
+        'The hospital has already responded to this case.',
+        409
+      )
+    }
+    const latest = await this.hospitalRepo.findLatestMagicLinkForCase(row.id)
+    if (
+      latest &&
+      now.getTime() - latest.createdAt.getTime() < HOSPITAL_LINK_RESEND_COOLDOWN_MS
+    ) {
+      throw new AppError(
+        'HOSPITAL_LINK_RESEND_TOO_SOON',
+        'A verification email was sent less than 10 minutes ago. Please wait before sending another.',
+        429
+      )
+    }
+
+    const email = this.decryptPrivate(row).hospitalInstitutionalEmail
+    const isDemoInbox = isDemoHospitalEmail(email)
+    if (isDemoInbox && !demoHospitalsEnabled(this.config.solana.cluster)) {
+      throw new AppError(
+        'DEMO_HOSPITAL_DEVNET_ONLY',
+        'The demo hospital email only works on Devnet.',
+        400
+      )
+    }
+    if (!isDemoInbox && !hospitalEmailDeliveryAvailable(this.config)) {
+      throw new AppError(
+        'HOSPITAL_EMAIL_UNAVAILABLE',
+        'Hospital verification emails are not switched on yet. Please try again later.',
+        503
+      )
+    }
+    const hospital = await this.hospitalRepo.findActiveForEmail(
+      email,
+      emailDomain(email) ?? ''
+    )
+    if (!hospital) {
+      throw new AppError(
+        'HOSPITAL_NOT_WHITELISTED',
+        'That institution is no longer on the hospital whitelist.',
+        400
+      )
+    }
+
+    const { verifyUrl, expiresAt, emailSent } =
+      await this.hospitalVerify.issueAndDeliver({
+        caseRow: row,
+        hospitalId: hospital.id,
+        hospitalDisplayName: hospital.displayName,
+        recipientEmail: email,
+      })
+    if (!isDemoInbox && !emailSent && this.config.isProduction) {
+      throw new AppError(
+        'HOSPITAL_EMAIL_FAILED',
+        'The verification email could not be sent. Please try again in a few minutes.',
+        502
+      )
+    }
+
+    return {
+      view: await this.toOwnerView(row),
+      emailSent,
+      ...(isDemoInbox
+        ? {
+            demoInboxEmail: {
+              to: email,
+              hospitalDisplayName: hospital.displayName,
+              publicCaseId: row.publicCaseId,
+              verifyUrl,
+              expiresAt: expiresAt.toISOString(),
+            },
+          }
+        : {}),
+    }
   }
 
   async getOwnerViewForAccessToken(

@@ -269,6 +269,23 @@ export function createCaseRouter(
       }
     },
 
+    resendHospitalLink: async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const result = await caseService.resendHospitalLink(
+          readCaseAccessToken(req, config)
+        )
+        res.status(200).json({
+          case: result.view,
+          emailSent: result.emailSent,
+          ...(result.demoInboxEmail
+            ? { demoInboxEmail: result.demoInboxEmail }
+            : {}),
+        })
+      } catch (err) {
+        next(err)
+      }
+    },
+
     revokeAccess: async (req: Request, res: Response, next: NextFunction) => {
       try {
         const token = readCaseAccessToken(req, config)

@@ -75,6 +75,11 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
+/** Production needs SMTP; development falls back to logging the link. */
+export function hospitalEmailDeliveryAvailable(config: ServerConfig): boolean {
+  return Boolean(config.smtpHost) || !config.isProduction
+}
+
 export async function deliverHospitalVerifyEmail(
   config: ServerConfig,
   input: HospitalVerifyEmailInput

@@ -77,7 +77,7 @@ export class HospitalVerifyService {
     hospitalId: string
     hospitalDisplayName: string
     recipientEmail: string
-  }): Promise<{ verifyUrl: string; expiresAt: Date }> {
+  }): Promise<{ verifyUrl: string; expiresAt: Date; emailSent: boolean }> {
     const now = new Date()
     await this.hospitals.revokeUnusedTokensForCase(opts.caseRow.id, now)
 
@@ -103,14 +103,16 @@ export class HospitalVerifyService {
       issued.rawToken
     )
 
+    let emailSent = false
     if (!isDemoHospitalEmail(opts.recipientEmail)) {
-      await deliverHospitalVerifyEmail(this.config, {
+      const delivery = await deliverHospitalVerifyEmail(this.config, {
         to: opts.recipientEmail,
         verifyUrl,
         publicCaseId: opts.caseRow.publicCaseId,
         hospitalDisplayName: opts.hospitalDisplayName,
         expiresAt: issued.expiresAt,
       })
+      emailSent = delivery.sent
     }
 
     await this.cases.insertAuditEvent({
@@ -122,10 +124,11 @@ export class HospitalVerifyService {
         hospitalId: opts.hospitalId,
         // email domain only — avoid full address in audit if possible; keep for demo trail
         recipientDomain: opts.recipientEmail.split('@')[1] ?? null,
+        emailSent,
       },
     })
 
-    return { verifyUrl, expiresAt: issued.expiresAt }
+    return { verifyUrl, expiresAt: issued.expiresAt, emailSent }
   }
 
   private decryptPrivate(row: CaseRow): PrivateCasePayload {

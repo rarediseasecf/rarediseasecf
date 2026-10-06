@@ -193,6 +193,11 @@ export function createApp(config: ServerConfig): {
   app.get('/api/cases/:publicCaseId', cases.byPublicId)
   app.post('/api/cases/access/revoke', cases.revokeAccess)
   app.post('/api/cases/public-story/withdraw', cases.withdrawPublicStory)
+  app.post(
+    '/api/cases/hospital-link/resend',
+    limit('hospital-link-resend', 5, 60 * 60_000),
+    cases.resendHospitalLink
+  )
 
   app.get('/api/hospital/reasons', hospital.reasonCatalog)
   app.get('/api/hospital/verify/:token', hospital.getVerify)
