@@ -193,7 +193,18 @@ export async function createCase(
   return (await res.json()) as CreatedCase
 }
 
-export type CreatedCase = OwnerCaseView
+/** Devnet only: the verification email the demo hospital would receive. */
+export interface DemoInboxEmail {
+  to: string
+  hospitalDisplayName: string
+  publicCaseId: string
+  verifyUrl: string
+  expiresAt: string
+}
+
+export type CreatedCase = OwnerCaseView & { demoInboxEmail?: DemoInboxEmail }
+
+export const DEMO_HOSPITAL_EMAIL = 'billing@himalaya-demo.org'
 
 export async function fetchCurrentCase(): Promise<CurrentCaseResponse> {
   return requestJson<CurrentCaseResponse>('/api/cases/current', {

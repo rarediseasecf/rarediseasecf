@@ -213,6 +213,9 @@ export function createCaseRouter(
           ...(result.demoVerifyUrl
             ? { demoVerifyUrl: result.demoVerifyUrl }
             : {}),
+          ...(result.demoInboxEmail
+            ? { demoInboxEmail: result.demoInboxEmail }
+            : {}),
         })
       } catch (err) {
         next(err)

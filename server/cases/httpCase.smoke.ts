@@ -54,6 +54,7 @@ async function main() {
     status: string
     documents?: Array<{ documentType: string; originalFilename: string }>
     hospitalInstitutionalEmail?: string
+    demoInboxEmail?: { to: string; publicCaseId: string; verifyUrl: string }
   }
 
   if (
@@ -73,6 +74,12 @@ async function main() {
   }
   if (created.hospitalInstitutionalEmail !== 'billing@himalaya-demo.org') {
     throw new Error('hospital email missing from owner view')
+  }
+  if (
+    created.demoInboxEmail?.publicCaseId !== created.publicCaseId ||
+    !created.demoInboxEmail.verifyUrl.includes('/verify/')
+  ) {
+    throw new Error('expected demo inbox email for the demo hospital')
   }
 
   // Personal email must be rejected

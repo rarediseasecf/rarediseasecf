@@ -4,8 +4,18 @@ import { faLock } from '@fortawesome/free-solid-svg-icons'
 import StepIndicator from '../components/StepIndicator'
 import SectionHeading from '../components/SectionHeading'
 import FaIcon from '../components/FaIcon'
-import { CaseApiError, createCase, fetchCurrentCase } from '../lib/caseApi'
+import DemoInboxEmailModal from '../components/DemoInboxEmailModal'
+import {
+  CaseApiError,
+  DEMO_HOSPITAL_EMAIL,
+  createCase,
+  fetchCurrentCase,
+  type CreatedCase,
+} from '../lib/caseApi'
 import { COVER_IMAGE_ACCEPT, prepareCoverImage } from '../lib/coverImage'
+import { IS_MAINNET } from '../lib/network'
+
+const DEMO_HOSPITAL_NAME = "Himalaya Children's Hospital (Demo)"
 
 const STEPS = [
   { label: 'Treatment need' },
@@ -103,6 +113,7 @@ export default function SubmitPage() {
   const [coverProcessing, setCoverProcessing] = useState(false)
   const [story, setStory] = useState<StoryState>(INITIAL_STORY)
   const [storyError, setStoryError] = useState<string | null>(null)
+  const [demoInboxCase, setDemoInboxCase] = useState<CreatedCase | null>(null)
 
   function updateStory<K extends keyof StoryState>(field: K, value: StoryState[K]) {
     setStory(s => ({ ...s, [field]: value }))
@@ -281,6 +292,10 @@ export default function SubmitPage() {
           story: story.story.trim(),
         },
       })
+      if (created.demoInboxEmail) {
+        setDemoInboxCase(created)
+        return
+      }
       navigate(`/submit/status/${created.publicCaseId}`, { replace: true })
     } catch (err) {
       setFormError(
@@ -421,6 +436,26 @@ export default function SubmitPage() {
                     our verified hospital list). Personal email domains are
                     rejected.
                   </p>
+                  {!IS_MAINNET && (
+                    <p className="field-help field-help--test" id="hospital-email-demo">
+                      Trying the demo? Use{' '}
+                      <button
+                        type="button"
+                        className="field-help__code-btn"
+                        onClick={() => {
+                          update('hospitalEmail', DEMO_HOSPITAL_EMAIL)
+                          if (!form.providerName.trim()) {
+                            update('providerName', DEMO_HOSPITAL_NAME)
+                          }
+                        }}
+                        title="Use the demo hospital email"
+                      >
+                        {DEMO_HOSPITAL_EMAIL}
+                      </button>{' '}
+                      — you&apos;ll see the hospital&apos;s verification email
+                      yourself and can approve the case.
+                    </p>
+                  )}
                   <input
                     id="hospitalEmail"
                     type="email"
@@ -925,6 +960,16 @@ export default function SubmitPage() {
           </div>
         </div>
       </div>
+
+      <DemoInboxEmailModal
+        email={demoInboxCase?.demoInboxEmail ?? null}
+        onClose={() => {
+          if (!demoInboxCase) return
+          navigate(`/submit/status/${demoInboxCase.publicCaseId}`, {
+            replace: true,
+          })
+        }}
+      />
     </main>
   )
 }

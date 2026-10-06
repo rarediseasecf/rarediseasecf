@@ -9,6 +9,10 @@ import {
 import { generatePublicCaseId } from '../utils/caseId.js'
 import { AppError } from '../errors.js'
 import { emailDomain } from '../hospitals/emailPolicy.js'
+import {
+  demoHospitalsEnabled,
+  isDemoHospitalEmail,
+} from '../hospitals/demoHospital.js'
 import type { HospitalVerifyService } from '../hospitals/hospitalVerifyService.js'
 import type { HospitalRepository } from '../hospitals/hospitalRepository.js'
 import { CaseRepository } from './caseRepository.js'
@@ -69,6 +73,14 @@ export class CaseService {
       : undefined
 
     const email = validated.privatePayload.hospitalInstitutionalEmail
+    const isDemoInbox = isDemoHospitalEmail(email)
+    if (isDemoInbox && !demoHospitalsEnabled(this.config.solana.cluster)) {
+      throw new AppError(
+        'DEMO_HOSPITAL_DEVNET_ONLY',
+        'The demo hospital email only works on Devnet. Use your hospital’s institutional email.',
+        400
+      )
+    }
     const domain = emailDomain(email) ?? ''
     const hospital = await this.hospitalRepo.findActiveForEmail(email, domain)
     if (!hospital) {
@@ -210,7 +222,7 @@ export class CaseService {
       metadataJson: { expiresAt: expiresAt.toISOString() },
     })
 
-    const { verifyUrl } = await this.hospitalVerify.issueAndDeliver({
+    const { verifyUrl, expiresAt: linkExpiresAt } = await this.hospitalVerify.issueAndDeliver({
       caseRow,
       hospitalId: hospital.id,
       hospitalDisplayName: hospital.displayName,
@@ -235,6 +247,17 @@ export class CaseService {
       ),
       rawAccessToken,
       ...(this.config.isProduction ? {} : { demoVerifyUrl: verifyUrl }),
+      ...(isDemoInbox
+        ? {
+            demoInboxEmail: {
+              to: email,
+              hospitalDisplayName: hospital.displayName,
+              publicCaseId,
+              verifyUrl,
+              expiresAt: linkExpiresAt.toISOString(),
+            },
+          }
+        : {}),
     }
   }
 
