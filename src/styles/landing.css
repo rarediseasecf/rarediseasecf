@@ -90,6 +90,18 @@
   max-width: 40ch;
   margin-bottom: 1.75rem;
 }
+.lp-hero__points {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.25rem;
+  padding: 0;
+  margin: -0.5rem 0 1.75rem;
+  font-size: .9375rem;
+  font-weight: 500;
+  color: var(--lp-ink, var(--color-text));
+}
+.lp-hero__points li { display: inline-flex; align-items: center; gap: .4rem; }
 .lp-hero__actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
 
 .lp-gap {

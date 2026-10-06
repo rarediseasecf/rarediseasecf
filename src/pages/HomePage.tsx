@@ -78,14 +78,23 @@ export default function HomePage() {
               Live on {NETWORK_NAME}
             </span>
             <h1 id="hero-heading" className="lp-hero__title">
-              Patient pays what they can. Insurance pays its share.
+              Medical crowdfunding you can trust.
             </h1>
             <p className="lp-hero__lede">
-              The hospital verifies via a secure link. Only the leftover gap is
-              crowdfunded — locked in a Solana program and released in 25%
-              tranches directly to the hospital. Unverified cases cannot receive
-              donations.
+              Every case is verified by the patient&apos;s hospital. Every
+              donation is tracked. Funds go directly toward their treatment.
             </p>
+            <ul className="lp-hero__points">
+              <li>
+                <span aria-hidden="true">🏥</span> Hospital verified
+              </li>
+              <li>
+                <span aria-hidden="true">🎯</span> Exact funding gap
+              </li>
+              <li>
+                <span aria-hidden="true">🔒</span> Funds paid directly to care
+              </li>
+            </ul>
             <div className="lp-hero__actions">
               <Link to="/campaigns" className="btn btn--lg lp-btn-ink">
                 Explore campaigns <FaIcon icon={faArrowRight} size="sm" />
