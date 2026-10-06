@@ -9,6 +9,7 @@ import type {
   PublicFinalReleaseView,
   PublicMilestoneView,
 } from '../milestones/milestoneService.js'
+import type { PublicPatientStoryView } from '../cases/publicStory.js'
 
 export const CAMPAIGN_PUBLICATION_STATUS = {
   APPROVED_NOT_PUBLISHED: 'APPROVED_NOT_PUBLISHED',
@@ -43,6 +44,8 @@ export interface PublicCampaignView {
   finalRelease: PublicFinalReleaseView | null
   /** Relative API path to the creator's cover photo, or null */
   coverImageUrl: string | null
+  /** Shared by the patient or guardian with recorded consent; null otherwise */
+  patientStory: PublicPatientStoryView | null
 }
 
 export function publicCoverImagePath(campaignId: string): string {
@@ -55,6 +58,7 @@ export function serializePublicCampaign(
   options: {
     hasCoverImage?: boolean
     finalRelease?: PublicFinalReleaseView | null
+    patientStory?: PublicPatientStoryView | null
   } = {}
 ): PublicCampaignView {
   if (draft.status !== CAMPAIGN_PUBLICATION_STATUS.PUBLISHED) {
@@ -80,9 +84,13 @@ export function serializePublicCampaign(
     return Math.min(100, Math.max(0, Math.round(pct * 100) / 100))
   })()
 
+  const patientStory = options.patientStory ?? null
+
   return {
     campaignId: draft.campaignId,
-    title: draft.publicTitle,
+    title: patientStory
+      ? `Help ${patientStory.displayName} get treatment`
+      : draft.publicTitle,
     summary: draft.publicSummary,
     providerDisplayName: draft.providerDisplayNameSnapshot,
     status: 'ACTIVE',
@@ -103,6 +111,7 @@ export function serializePublicCampaign(
     coverImageUrl: options.hasCoverImage
       ? publicCoverImagePath(draft.campaignId)
       : null,
+    patientStory,
   }
 }
 

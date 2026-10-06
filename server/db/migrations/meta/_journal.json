@@ -64,6 +64,13 @@
       "when": 1790290000000,
       "tag": "0008_onchain_only",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790300000000,
+      "tag": "0009_public_patient_story",
+      "breakpoints": true
     }
   ]
 }

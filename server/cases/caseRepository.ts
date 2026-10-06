@@ -47,6 +47,17 @@ export class CaseRepository {
     return row
   }
 
+  /** Withdrawal erases the story text, not just hides it. */
+  async withdrawPublicStory(caseId: string, at: Date): Promise<CaseRow> {
+    const [row] = await this.db
+      .update(cases)
+      .set({ publicStory: null, publicStoryWithdrawnAt: at, updatedAt: at })
+      .where(eq(cases.id, caseId))
+      .returning()
+    if (!row) throw new Error('withdrawPublicStory returned no row')
+    return row
+  }
+
   async findById(id: string): Promise<CaseRow | undefined> {
     const rows = await this.db
       .select()

@@ -19,6 +19,14 @@ import { sql } from 'drizzle-orm'
 
 export const CASE_STATUS_UNDER_REVIEW = 'UNDER_REVIEW' as const
 
+export interface PublicPatientStoryRecord {
+  displayName: string
+  country: string | null
+  condition: string | null
+  story: string
+  sharedBy: 'PATIENT' | 'GUARDIAN'
+}
+
 /* ── Existing Day 4–6 tables (unchanged) ── */
 
 export const cases = pgTable(
@@ -49,6 +57,11 @@ export const cases = pgTable(
     /** Optional public campaign photo (metadata stripped, encrypted at rest); served only once published */
     coverImageRef: varchar('cover_image_ref', { length: 300 }),
     coverImageContentType: varchar('cover_image_content_type', { length: 32 }),
+    /** Opt-in public patient story; shown only while consented and the campaign is published */
+    publicStory: jsonb('public_story').$type<PublicPatientStoryRecord | null>(),
+    publicStoryConsentAt: timestamp('public_story_consent_at', { withTimezone: true }),
+    publicStoryConsentVersion: varchar('public_story_consent_version', { length: 32 }),
+    publicStoryWithdrawnAt: timestamp('public_story_withdrawn_at', { withTimezone: true }),
   },
   table => [
     uniqueIndex('cases_public_case_id_uidx').on(table.publicCaseId),

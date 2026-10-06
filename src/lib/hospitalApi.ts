@@ -1,6 +1,7 @@
 /**
  * Hospital verifier portal client — authorized by magic-link token only.
  */
+import type { PatientStory } from './caseApi'
 
 export class HospitalApiError extends Error {
   readonly code: string
@@ -34,6 +35,7 @@ export interface HospitalCaseSummary {
     uploadedAt: string
   }>
   hasCoverImage: boolean
+  publicStory: PatientStory | null
   hospitalDisplayName: string
   expiresAt: string
   recipientEmail: string

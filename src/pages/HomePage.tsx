@@ -212,7 +212,8 @@ export default function HomePage() {
               Private by default.
             </h2>
             <p className="lp-section__sub">
-              Medical details stay with the hospital. Only the money is public.
+              Medical records stay with the hospital. A patient story is shown
+              only if the patient or guardian chooses to share it.
             </p>
             <Link to="/privacy" className="lp-link-arrow">
               Privacy details <FaIcon icon={faArrowRight} size="sm" />
@@ -220,11 +221,10 @@ export default function HomePage() {
           </div>
           <table className="lp-table">
             <tbody>
-              <Row what="Diagnosis and documents" who="private" />
-              <Row what="Patient identity" who="private" />
-              <Row what="Hospital's wallet" who="private" />
+              <Row what="Medical documents and records" who="private" />
+              <Row what="Patient name, photo and story" who="choice" />
               <Row what="Funding goal and progress" who="public" />
-              <Row what="Donations and payouts" who="public" />
+              <Row what="Donations, payouts and the hospital's payout wallet (on-chain)" who="public" />
             </tbody>
           </table>
         </div>
@@ -262,12 +262,14 @@ function Step({ n, title, children }: { n: string; title: string; children: Reac
   )
 }
 
-function Row({ what, who }: { what: string; who: 'private' | 'public' }) {
+function Row({ what, who }: { what: string; who: 'private' | 'public' | 'choice' }) {
   return (
     <tr>
       <td>{what}</td>
       <td>
-        <span className={`lp-pill lp-pill--${who}`}>{who}</span>
+        <span className={`lp-pill lp-pill--${who}`}>
+          {who === 'choice' ? "patient's choice" : who}
+        </span>
       </td>
     </tr>
   )

@@ -23,6 +23,11 @@ import {
 } from './caseValidation.js'
 import { persistCaseDocumentFile } from './documentStorage.js'
 import {
+  PUBLIC_STORY_CONSENT_VERSION,
+  validatePublicStoryInput,
+  type PublicStoryInput,
+} from './publicStory.js'
+import {
   persistCoverImageFile,
   sanitizeCoverImage,
   type UploadedCoverImage,
@@ -57,10 +62,12 @@ export class CaseService {
   async createCase(
     rawInput: Partial<CreateCaseInput>,
     uploadedDocs: UploadedDocumentInput[] = [],
-    uploadedCoverImage?: UploadedCoverImage
+    uploadedCoverImage?: UploadedCoverImage,
+    publicStoryInput: PublicStoryInput = {}
   ): Promise<CreateCaseResult> {
     const validated = validateCreateCaseInput(rawInput)
     const docs = validateUploadedDocuments(uploadedDocs)
+    const publicStory = validatePublicStoryInput(publicStoryInput)
     const coverImage = uploadedCoverImage
       ? sanitizeCoverImage(uploadedCoverImage)
       : undefined
@@ -118,6 +125,13 @@ export class CaseService {
       privatePayloadIv: encrypted.iv,
       privatePayloadAuthTag: encrypted.authTag,
       schemaVersion: 2,
+      ...(publicStory
+        ? {
+            publicStory,
+            publicStoryConsentAt: now,
+            publicStoryConsentVersion: PUBLIC_STORY_CONSENT_VERSION,
+          }
+        : {}),
     })
 
     const documentRows = []
@@ -196,6 +210,17 @@ export class CaseService {
         types: documentRows.map(d => d.documentType),
       },
     })
+    if (publicStory) {
+      await this.repo.insertAuditEvent({
+        caseId: caseRow.id,
+        eventType: CASE_AUDIT_EVENT.PUBLIC_STORY_CONSENTED,
+        createdAt: now,
+        metadataJson: {
+          consentVersion: PUBLIC_STORY_CONSENT_VERSION,
+          sharedBy: publicStory.sharedBy,
+        },
+      })
+    }
     await this.repo.insertAuditEvent({
       caseId: caseRow.id,
       eventType: CASE_AUDIT_EVENT.CASE_ACCESS_SESSION_CREATED,
@@ -343,6 +368,25 @@ export class CaseService {
     })
 
     return this.toOwnerView(session.caseRow)
+  }
+
+  async withdrawPublicStory(rawToken: string | undefined): Promise<OwnerCaseView> {
+    const session = rawToken
+      ? await this.repo.findActiveAccessByTokenHash(hashToken(rawToken), new Date())
+      : undefined
+    if (!session) {
+      throw new AppError('CASE_ACCESS_REQUIRED', 'You do not have access to this case.', 401)
+    }
+
+    const now = new Date()
+    const row = await this.repo.withdrawPublicStory(session.caseId, now)
+    await this.repo.insertAuditEvent({
+      caseId: session.caseId,
+      eventType: CASE_AUDIT_EVENT.PUBLIC_STORY_WITHDRAWN,
+      createdAt: now,
+      metadataJson: null,
+    })
+    return this.toOwnerView(row)
   }
 
   async revokeAccess(rawToken: string | undefined): Promise<void> {

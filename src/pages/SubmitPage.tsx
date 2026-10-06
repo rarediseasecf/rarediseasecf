@@ -19,8 +19,32 @@ const STEPS = [
   { label: 'Treatment need' },
   { label: 'Cost & institution' },
   { label: 'Assistance' },
+  { label: 'Your story (optional)' },
   { label: 'Photo, documents & submit' },
 ]
+
+const STORY_STEP = 3
+const FINAL_STEP = 4
+
+interface StoryState {
+  share: boolean
+  sharedBy: '' | 'PATIENT' | 'GUARDIAN'
+  displayName: string
+  country: string
+  condition: string
+  story: string
+  consent: boolean
+}
+
+const INITIAL_STORY: StoryState = {
+  share: false,
+  sharedBy: '',
+  displayName: '',
+  country: '',
+  condition: '',
+  story: '',
+  consent: false,
+}
 
 /** Hosted API functions reject request bodies above ~4.5 MB. */
 const MAX_UPLOAD_TOTAL_BYTES = 4 * 1024 * 1024
@@ -83,6 +107,14 @@ export default function SubmitPage() {
   const [coverError, setCoverError] = useState<string | null>(null)
   const [coverProcessing, setCoverProcessing] = useState(false)
   const [testInboxCase, setTestInboxCase] = useState<CreatedCase | null>(null)
+  const [story, setStory] = useState<StoryState>(INITIAL_STORY)
+  const [storyError, setStoryError] = useState<string | null>(null)
+
+  function updateStory<K extends keyof StoryState>(field: K, value: StoryState[K]) {
+    setStory(s => ({ ...s, [field]: value }))
+    setStoryError(null)
+    setFormError(null)
+  }
 
   useEffect(() => {
     if (!coverImage) {
@@ -191,7 +223,16 @@ export default function SubmitPage() {
         newErrors.providerCostEstimate = 'Enter the estimated treatment cost.'
       }
     }
-    if (step === 3) {
+    if (step === STORY_STEP && story.share) {
+      let message: string | null = null
+      if (!story.sharedBy) message = 'Tell us whether you are the patient or their parent / guardian.'
+      else if (!story.displayName.trim()) message = 'Enter the name to show (a first name or nickname is enough).'
+      else if (story.story.trim().length < 20) message = 'Write at least a couple of sentences for your story.'
+      else if (!story.consent) message = 'Tick the consent box to share publicly, or turn sharing off.'
+      setStoryError(message)
+      if (message) return false
+    }
+    if (step === FINAL_STEP) {
       if (docs.length < 2) {
         newErrors.documents =
           'Upload at least two supporting documents (PDF, PNG, or JPG).'
@@ -234,6 +275,16 @@ export default function SubmitPage() {
           documentType: d.documentType,
         })),
         coverImage: coverImage ?? undefined,
+        publicStory:
+          story.share && story.consent && story.sharedBy
+            ? {
+                sharedBy: story.sharedBy,
+                displayName: story.displayName.trim(),
+                country: story.country.trim(),
+                condition: story.condition.trim(),
+                story: story.story.trim(),
+              }
+            : undefined,
       })
       if (created.testInboxEmail) {
         setTestInboxCase(created)
@@ -503,7 +554,166 @@ export default function SubmitPage() {
               </section>
             )}
 
-            {step === 3 && (
+            {step === STORY_STEP && (
+              <section aria-labelledby="step-story-heading">
+                <h2 id="step-story-heading" className="submit-form__step-title">
+                  Your story (optional)
+                </h2>
+                <p className="submit-form__step-intro">
+                  Donors give more when they know who they are helping. You decide
+                  whether to share anything. If you don&apos;t, your campaign shows
+                  only the verified funding goal.
+                </p>
+
+                <fieldset className="story-choice">
+                  <legend className="field-label">Share a public story?</legend>
+                  <label className="story-choice__option">
+                    <input
+                      type="radio"
+                      name="shareStory"
+                      checked={!story.share}
+                      onChange={() => updateStory('share', false)}
+                    />
+                    <span>
+                      <strong>Keep everything private</strong>
+                      <span className="field-help">Only the funding goal and progress are public.</span>
+                    </span>
+                  </label>
+                  <label className="story-choice__option">
+                    <input
+                      type="radio"
+                      name="shareStory"
+                      checked={story.share}
+                      onChange={() => updateStory('share', true)}
+                    />
+                    <span>
+                      <strong>Share our story publicly</strong>
+                      <span className="field-help">You choose exactly what to show, and can remove it any time.</span>
+                    </span>
+                  </label>
+                </fieldset>
+
+                {story.share && (
+                  <div className="story-fields">
+                    <fieldset className="story-choice">
+                      <legend className="field-label">
+                        Who is sharing?{' '}
+                        <span className="field-required" aria-hidden="true">*</span>
+                      </legend>
+                      <label className="story-choice__option story-choice__option--inline">
+                        <input
+                          type="radio"
+                          name="storySharedBy"
+                          checked={story.sharedBy === 'PATIENT'}
+                          onChange={() => updateStory('sharedBy', 'PATIENT')}
+                        />
+                        <span>I am the patient</span>
+                      </label>
+                      <label className="story-choice__option story-choice__option--inline">
+                        <input
+                          type="radio"
+                          name="storySharedBy"
+                          checked={story.sharedBy === 'GUARDIAN'}
+                          onChange={() => updateStory('sharedBy', 'GUARDIAN')}
+                        />
+                        <span>I am the patient&apos;s parent or legal guardian</span>
+                      </label>
+                    </fieldset>
+
+                    <div className="field-group">
+                      <label htmlFor="storyDisplayName" className="field-label">
+                        Name to show{' '}
+                        <span className="field-required" aria-hidden="true">*</span>
+                      </label>
+                      <p className="field-help">A first name or nickname is enough. Avoid surnames.</p>
+                      <input
+                        id="storyDisplayName"
+                        type="text"
+                        maxLength={60}
+                        className="field-input"
+                        placeholder="e.g. Aarav"
+                        value={story.displayName}
+                        onChange={e => updateStory('displayName', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="story-fields__row">
+                      <div className="field-group">
+                        <label htmlFor="storyCountry" className="field-label">Country</label>
+                        <input
+                          id="storyCountry"
+                          type="text"
+                          maxLength={60}
+                          className="field-input"
+                          placeholder="e.g. Nepal"
+                          value={story.country}
+                          onChange={e => updateStory('country', e.target.value)}
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label htmlFor="storyCondition" className="field-label">Condition (optional)</label>
+                        <input
+                          id="storyCondition"
+                          type="text"
+                          maxLength={120}
+                          className="field-input"
+                          placeholder="e.g. Gaucher disease"
+                          value={story.condition}
+                          onChange={e => updateStory('condition', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field-group">
+                      <label htmlFor="storyText" className="field-label">
+                        Your story{' '}
+                        <span className="field-required" aria-hidden="true">*</span>
+                      </label>
+                      <p className="field-help field-help--warning">
+                        Don&apos;t include surnames, addresses, phone numbers, ID or
+                        medical record numbers, or photos of documents.
+                      </p>
+                      <textarea
+                        id="storyText"
+                        className="field-input field-textarea"
+                        rows={6}
+                        maxLength={2000}
+                        placeholder="Who is the patient, what treatment do they need, and what would it change for your family?"
+                        value={story.story}
+                        onChange={e => updateStory('story', e.target.value)}
+                      />
+                      <p className="field-help">{story.story.length} / 2000</p>
+                    </div>
+
+                    <label className="story-consent">
+                      <input
+                        type="checkbox"
+                        checked={story.consent}
+                        onChange={e => updateStory('consent', e.target.checked)}
+                      />
+                      <span>
+                        I am the patient, or the patient&apos;s parent / legal
+                        guardian, and I agree that the name, country, condition and
+                        story above will be shown publicly on the campaign page,
+                        where anyone can read, copy or share them. I can withdraw
+                        this at any time from my case page — RareDiseaseCF then
+                        removes the story from the site, but copies others already
+                        made cannot be recalled. Medical documents are never
+                        published.
+                      </span>
+                    </label>
+                  </div>
+                )}
+
+                {storyError && (
+                  <p className="field-error" role="alert">
+                    {storyError}
+                  </p>
+                )}
+              </section>
+            )}
+
+            {step === FINAL_STEP && (
               <section aria-labelledby="step-3-heading">
                 <h2 id="step-3-heading" className="submit-form__step-title">
                   Campaign photo
@@ -670,6 +880,10 @@ export default function SubmitPage() {
                       <dt>Campaign photo</dt>
                       <dd>{coverImage ? 'Added' : 'None'}</dd>
                     </div>
+                    <div className="summary-card__row">
+                      <dt>Public story</dt>
+                      <dd>{story.share ? `Shared as “${story.displayName.trim()}”` : 'Private'}</dd>
+                    </div>
                   </dl>
                 </div>
 
@@ -678,7 +892,10 @@ export default function SubmitPage() {
                   authorized to act for them, and you agree that these details
                   and documents are shared with the hospital you listed so it
                   can verify the case. Everything is encrypted and nothing
-                  personal is written on-chain. See our{' '}
+                  personal is written on-chain.
+                  {story.share &&
+                    ' The story you chose to share is shown on the campaign page once the hospital verifies the case.'}{' '}
+                  See our{' '}
                   <Link to="/privacy">Privacy Policy</Link>.
                 </p>
               </section>

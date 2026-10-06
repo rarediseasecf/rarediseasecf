@@ -2,6 +2,7 @@
  * Public campaign API client — no cookies required.
  * Values come from the server serializer; do not recompute funding progress.
  */
+import type { PatientStory } from './caseApi'
 
 export class PublicCampaignApiError extends Error {
   readonly code: string
@@ -52,6 +53,7 @@ export interface PublicCampaign {
   /** Funds left in escrow at the end date, sent to the hospital */
   finalRelease: PublicRelease | null
   coverImageUrl: string | null
+  patientStory: PatientStory | null
 }
 
 export interface PublicCampaignListResponse {

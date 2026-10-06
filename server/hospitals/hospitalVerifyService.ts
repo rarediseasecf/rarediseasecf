@@ -28,6 +28,7 @@ import {
 } from './magicLink.js'
 import { deliverHospitalVerifyEmail } from './emailDelivery.js'
 import { isTestHospitalEmail, testHospitalEnabled } from './testHospital.js'
+import { activePublicStory, type PublicPatientStoryView } from '../cases/publicStory.js'
 import {
   isHospitalApproveReason,
   isHospitalRejectReason,
@@ -55,6 +56,8 @@ export interface HospitalCaseSummary {
   fundingGapUsdc: string
   documents: CaseDocumentView[]
   hasCoverImage: boolean
+  /** Patient-consented text that will appear on the public campaign */
+  publicStory: PublicPatientStoryView | null
   hospitalDisplayName: string
   expiresAt: string
   recipientEmail: string
@@ -273,6 +276,7 @@ export class HospitalVerifyService {
       fundingGapUsdc: formatMinorUnitsAsUsdc(fundingGapMinor),
       documents: docs.map(serializeDocumentView),
       hasCoverImage: Boolean(caseRow.coverImageRef),
+      publicStory: activePublicStory(caseRow),
       hospitalDisplayName: hospital?.displayName ?? 'Institution',
       expiresAt: tokenRow.expiresAt.toISOString(),
       recipientEmail: payload.email,

@@ -42,6 +42,9 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
         </div>
 
         <h3 className="campaign-card__title">{campaign.title}</h3>
+        {campaign.patientStory && (
+          <p className="campaign-card__story">{campaign.patientStory.story}</p>
+        )}
 
         <p className="campaign-card__provider">
           <span className="campaign-card__provider-label">Institution</span>

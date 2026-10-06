@@ -196,7 +196,29 @@ export default function CampaignDetailPage() {
               />
             )}
             <h1 className="campaign-detail__heading">{campaign.title}</h1>
-            <p className="campaign-detail__desc">{campaign.summary}</p>
+            {campaign.patientStory ? (
+              <section className="patient-story" aria-labelledby="patient-story-heading">
+                <h2 id="patient-story-heading" className="patient-story__title">
+                  {campaign.patientStory.displayName}&apos;s story
+                </h2>
+                {(campaign.patientStory.country || campaign.patientStory.condition) && (
+                  <p className="patient-story__meta">
+                    {[campaign.patientStory.condition, campaign.patientStory.country]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+                <p className="patient-story__text">{campaign.patientStory.story}</p>
+                <p className="patient-story__consent">
+                  Shared by the {campaign.patientStory.sharedBy === 'GUARDIAN' ? 'patient’s parent or guardian' : 'patient'}{' '}
+                  with their consent on{' '}
+                  {new Date(campaign.patientStory.consentedAt).toLocaleDateString()}. Medical
+                  records stay private with the hospital.
+                </p>
+              </section>
+            ) : (
+              <p className="campaign-detail__desc">{campaign.summary}</p>
+            )}
 
             <div className="info-card">
               <h2 className="info-card__title">Campaign information</h2>
@@ -237,9 +259,9 @@ export default function CampaignDetailPage() {
                 </div>
               </dl>
               <p className="info-card__privacy-note">
-                Personal treatment details and institutional banking data remain
-                private. This page shows only the anonymized funding goal and
-                verification badge.
+                {campaign.patientStory
+                  ? 'Medical documents and records stay private. Only the story the family chose to share, the funding goal and the verification badge are shown.'
+                  : 'Personal treatment details and institutional banking data remain private. This page shows only the anonymized funding goal and verification badge.'}
               </p>
             </div>
 

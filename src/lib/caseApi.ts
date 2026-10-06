@@ -48,6 +48,26 @@ export interface OwnerCaseView {
     publicationStatus: 'PUBLISHED' | 'APPROVED_NOT_PUBLISHED'
     publishedAt: string | null
   }
+  publicStory: PatientStory | null
+  publicStoryWithdrawnAt: string | null
+}
+
+/** Shared publicly only with the patient's or guardian's recorded consent. */
+export interface PatientStory {
+  displayName: string
+  country: string | null
+  condition: string | null
+  story: string
+  sharedBy: 'PATIENT' | 'GUARDIAN'
+  consentedAt: string
+}
+
+export interface PatientStoryInput {
+  displayName: string
+  country: string
+  condition: string
+  story: string
+  sharedBy: 'PATIENT' | 'GUARDIAN'
 }
 
 export interface CurrentCaseResponse {
@@ -70,6 +90,8 @@ export interface CreateCasePayload {
   documents: CreateCaseDocument[]
   /** Optional public campaign photo */
   coverImage?: File
+  /** Set only when the submitter opted in and ticked the consent box */
+  publicStory?: PatientStoryInput
 }
 
 interface ErrorPayload {
@@ -139,6 +161,15 @@ export async function createCase(
   if (payload.coverImage) {
     form.append('coverImage', payload.coverImage)
   }
+  if (payload.publicStory) {
+    form.append('shareStory', 'true')
+    form.append('storyConsent', 'true')
+    form.append('storySharedBy', payload.publicStory.sharedBy)
+    form.append('storyDisplayName', payload.publicStory.displayName)
+    form.append('storyCountry', payload.publicStory.country)
+    form.append('storyCondition', payload.publicStory.condition)
+    form.append('storyText', payload.publicStory.story)
+  }
 
   let res: Response
   try {
@@ -188,6 +219,13 @@ export async function fetchCaseByPublicId(
     `/api/cases/${encodeURIComponent(publicCaseId)}`,
     { method: 'GET' }
   )
+}
+
+export async function withdrawPublicStory(): Promise<OwnerCaseView> {
+  return requestJson<OwnerCaseView>('/api/cases/public-story/withdraw', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
 }
 
 export async function revokeCaseAccess(): Promise<void> {

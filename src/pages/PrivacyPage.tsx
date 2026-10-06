@@ -124,7 +124,8 @@ export default function PrivacyPage() {
             <strong>Public:</strong> an opaque campaign ID (for example{' '}
             <code>K7MQP</code>), the verified funding target, amount raised,
             milestone progress, a “Verified by hospital” badge, donor display
-            names (or “Anonymous”) and blockchain transactions.
+            names (or “Anonymous”) and blockchain transactions, including the
+            hospital’s payout wallet address.
           </p>
           <p>
             <strong>Campaign photo (optional):</strong> if you add one, it is
@@ -133,9 +134,21 @@ export default function PrivacyPage() {
             and the hospital sees it before it goes live.
           </p>
           <p>
-            <strong>Never public:</strong> patient identity, treatment details,
-            uploaded documents, the hospital’s email address and bank or payout
-            details beyond the on-chain wallet.
+            <strong>Patient story (optional, your choice):</strong> the patient,
+            or their parent or legal guardian, can choose to show a name, country,
+            condition and short story on the campaign page. Nothing is shown
+            unless you opt in and tick an explicit consent box; we record when you
+            agreed and which consent text you saw. The hospital sees the story
+            before the campaign goes live. You can withdraw at any time from your
+            case page — we then delete the story and stop showing it, although
+            copies others already made cannot be recalled. This follows the
+            explicit-consent rule that health-privacy laws share, including HIPAA
+            (US), GDPR (EU/UK), India’s DPDP Act and Nepal’s Privacy Act.
+          </p>
+          <p>
+            <strong>Never public:</strong> medical documents and records,
+            treatment details you did not choose to share, the hospital’s email
+            address and bank or payout details beyond the on-chain wallet.
           </p>
         </section>
 

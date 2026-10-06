@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import type { EncryptionKeyMaterial } from '../security/encryption.js'
 import { readStoredDocumentFile } from '../cases/documentStorage.js'
@@ -23,6 +23,7 @@ import {
   type ReviewerCampaignDraftView,
 } from './publicCampaignSerializer.js'
 import { MilestoneService } from '../milestones/milestoneService.js'
+import { activePublicStory, type PublicPatientStoryView } from '../cases/publicStory.js'
 
 type AppDb = Database['db']
 type AppTx = Parameters<Parameters<AppDb['transaction']>[0]>[0]
@@ -47,13 +48,26 @@ export class CampaignPublicationService {
     this.milestones = new MilestoneService(db)
   }
 
-  private async caseIdsWithCoverImage(caseIds: string[]): Promise<Set<string>> {
-    if (caseIds.length === 0) return new Set()
+  private async publicExtrasByCaseId(
+    caseIds: string[]
+  ): Promise<Map<string, { hasCoverImage: boolean; patientStory: PublicPatientStoryView | null }>> {
+    if (caseIds.length === 0) return new Map()
     const rows = await this.db
-      .select({ id: cases.id })
+      .select({
+        id: cases.id,
+        coverImageRef: cases.coverImageRef,
+        publicStory: cases.publicStory,
+        publicStoryConsentAt: cases.publicStoryConsentAt,
+        publicStoryWithdrawnAt: cases.publicStoryWithdrawnAt,
+      })
       .from(cases)
-      .where(and(inArray(cases.id, caseIds), isNotNull(cases.coverImageRef)))
-    return new Set(rows.map(r => r.id))
+      .where(inArray(cases.id, caseIds))
+    return new Map(
+      rows.map(r => [
+        r.id,
+        { hasCoverImage: r.coverImageRef !== null, patientStory: activePublicStory(r) },
+      ])
+    )
   }
 
   /** Cover photo bytes for a PUBLISHED campaign only; unpublished looks like missing. */
@@ -226,14 +240,14 @@ export class CampaignPublicationService {
       })
     }
 
-    const withCover = await this.caseIdsWithCoverImage(rows.map(r => r.caseId))
+    const extras = await this.publicExtrasByCaseId(rows.map(r => r.caseId))
     return {
       campaigns: await Promise.all(
         rows.map(async draft =>
           serializePublicCampaign(
             draft,
             await this.milestones.listPublicForDraft(draft.id),
-            { hasCoverImage: withCover.has(draft.caseId) }
+            extras.get(draft.caseId)
           )
         )
       ),
@@ -274,9 +288,9 @@ export class CampaignPublicationService {
     )
     const milestones = await this.milestones.listPublicForDraft(draft.id)
     const finalRelease = await this.milestones.finalReleaseForDraft(draft.id)
-    const withCover = await this.caseIdsWithCoverImage([draft.caseId])
+    const extras = await this.publicExtrasByCaseId([draft.caseId])
     return serializePublicCampaign(draft, milestones, {
-      hasCoverImage: withCover.has(draft.caseId),
+      ...extras.get(draft.caseId),
       finalRelease,
     })
   }

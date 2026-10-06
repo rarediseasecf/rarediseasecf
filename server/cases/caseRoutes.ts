@@ -36,7 +36,7 @@ const upload = multer({
   limits: {
     files: MAX_DOCUMENTS_PER_CASE + 1,
     fileSize: MAX_DOCUMENT_BYTES,
-    fields: 20,
+    fields: 32,
   },
 })
 
@@ -196,7 +196,16 @@ export function createCaseRouter(
                 : '0',
           },
           documents,
-          collectCoverImage(req)
+          collectCoverImage(req),
+          {
+            shareStory: body.shareStory,
+            consent: body.storyConsent,
+            sharedBy: body.storySharedBy,
+            displayName: body.storyDisplayName,
+            country: body.storyCountry,
+            condition: body.storyCondition,
+            story: body.storyText,
+          }
         )
         setCaseAccessCookie(res, config, result.rawAccessToken)
         res.status(201).json({
@@ -245,6 +254,15 @@ export function createCaseRouter(
           publicCaseId,
           token
         )
+        res.status(200).json(view)
+      } catch (err) {
+        next(err)
+      }
+    },
+
+    withdrawPublicStory: async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const view = await caseService.withdrawPublicStory(readCaseAccessToken(req, config))
         res.status(200).json(view)
       } catch (err) {
         next(err)

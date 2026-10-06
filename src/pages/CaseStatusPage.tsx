@@ -9,6 +9,7 @@ import {
   fetchCaseByPublicId,
   fetchCurrentCase,
   revokeCaseAccess,
+  withdrawPublicStory,
   type OwnerCaseView,
 } from '../lib/caseApi'
 
@@ -140,6 +141,24 @@ export default function CaseStatusPage() {
   const { publicCaseId } = useParams<{ publicCaseId?: string }>()
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   const [revoking, setRevoking] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [storyError, setStoryError] = useState<string | null>(null)
+
+  async function handleWithdrawStory() {
+    if (!window.confirm('Remove your story from the public campaign page? This deletes it and cannot be undone.')) {
+      return
+    }
+    setWithdrawing(true)
+    setStoryError(null)
+    try {
+      const view = await withdrawPublicStory()
+      setState({ phase: 'ready', view })
+    } catch {
+      setStoryError('We could not remove your story. Please try again.')
+    } finally {
+      setWithdrawing(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -374,6 +393,47 @@ export default function CaseStatusPage() {
               content or PHI is placed on-chain.
             </p>
           </div>
+
+          {view.publicStory ? (
+            <div className="case-status-story">
+              <h2 className="case-status-docs__title">Your public story</h2>
+              <p className="case-status-story__note">
+                {isPublished
+                  ? 'This is shown on your public campaign page.'
+                  : 'This will be shown on your campaign page once it goes live.'}{' '}
+                You agreed to share it on{' '}
+                {new Date(view.publicStory.consentedAt).toLocaleDateString()}.
+              </p>
+              <blockquote className="case-status-story__text">
+                <strong>{view.publicStory.displayName}</strong>
+                {(view.publicStory.condition || view.publicStory.country) &&
+                  ` · ${[view.publicStory.condition, view.publicStory.country].filter(Boolean).join(' · ')}`}
+                <br />
+                {view.publicStory.story}
+              </blockquote>
+              {storyError && (
+                <p className="field-error" role="alert">
+                  {storyError}
+                </p>
+              )}
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                disabled={withdrawing}
+                onClick={() => {
+                  void handleWithdrawStory()
+                }}
+              >
+                {withdrawing ? 'Removing…' : 'Stop sharing and delete my story'}
+              </button>
+            </div>
+          ) : view.publicStoryWithdrawnAt ? (
+            <p className="case-status-story__note">
+              You stopped sharing your story on{' '}
+              {new Date(view.publicStoryWithdrawnAt).toLocaleDateString()}. It has been
+              deleted and is no longer shown publicly.
+            </p>
+          ) : null}
 
           <p className="case-status-panel__privacy">
             Your case details are encrypted at rest and only shown to the

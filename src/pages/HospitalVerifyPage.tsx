@@ -338,6 +338,27 @@ export default function HospitalVerifyPage() {
                 </>
               )}
 
+              {phase.summary.publicStory && (
+                <>
+                  <h2 className="hospital-verify-panel__subtitle">
+                    Public patient story
+                  </h2>
+                  <blockquote className="case-status-story__text">
+                    <strong>{phase.summary.publicStory.displayName}</strong>
+                    {(phase.summary.publicStory.condition || phase.summary.publicStory.country) &&
+                      ` · ${[phase.summary.publicStory.condition, phase.summary.publicStory.country].filter(Boolean).join(' · ')}`}
+                    <br />
+                    {phase.summary.publicStory.story}
+                  </blockquote>
+                  <p className="hospital-verify-panel__note">
+                    The {phase.summary.publicStory.sharedBy === 'GUARDIAN' ? 'patient’s parent or guardian' : 'patient'}{' '}
+                    consented to show this publicly next to your institution&apos;s
+                    name. If it is inaccurate or reveals more than it should,
+                    reject the case with a note so it can be corrected.
+                  </p>
+                </>
+              )}
+
               <div className="hospital-verify-actions">
                 <div className="hospital-payout" role="group" aria-labelledby="payout-title">
                   <h2 id="payout-title" className="hospital-verify-panel__subtitle">

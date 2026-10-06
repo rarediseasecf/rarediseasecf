@@ -8,6 +8,7 @@ import type {
   CampaignPublicationView,
   CaseDocumentView,
 } from './types.js'
+import { activePublicStory } from './publicStory.js'
 
 export function serializeDocumentView(row: CaseDocumentRow): CaseDocumentView {
   return {
@@ -50,6 +51,8 @@ export function serializeOwnerCaseView(
     documents,
     ...(lockedApproval ? { lockedApproval } : {}),
     ...(campaignPublication ? { campaignPublication } : {}),
+    publicStory: activePublicStory(row),
+    publicStoryWithdrawnAt: row.publicStoryWithdrawnAt?.toISOString() ?? null,
   }
 }
 

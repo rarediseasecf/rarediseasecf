@@ -1487,6 +1487,63 @@ dialog.modal::backdrop {
 .campaign-detail__heading { font-size: clamp(1.375rem, 2.5vw, 1.75rem); font-weight: 800; }
 .campaign-detail__desc { font-size: 1rem; color: var(--color-text-muted); max-width: 65ch; line-height: 1.7; }
 
+.patient-story { max-width: 65ch; display: flex; flex-direction: column; gap: .5rem; }
+.patient-story__title { font-size: 1.125rem; font-weight: 700; }
+.patient-story__meta { font-size: .875rem; font-weight: 600; color: var(--color-primary); }
+.patient-story__text { font-size: 1rem; line-height: 1.7; color: var(--color-text); white-space: pre-line; }
+.patient-story__consent { font-size: .8125rem; color: var(--color-text-subtle); }
+
+.campaign-card__story {
+  font-size: .875rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.story-choice { border: 0; padding: 0; margin: 0 0 1rem; display: flex; flex-direction: column; gap: .5rem; }
+.story-choice__option {
+  display: flex;
+  align-items: flex-start;
+  gap: .625rem;
+  padding: .75rem .875rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.story-choice__option > span { display: flex; flex-direction: column; gap: .15rem; }
+.story-choice__option input { margin-top: .2rem; }
+.story-choice__option--inline { align-items: center; }
+.story-fields { display: flex; flex-direction: column; gap: .25rem; }
+.story-fields__row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 560px) { .story-fields__row { grid-template-columns: 1fr; } }
+.story-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: .625rem;
+  padding: .875rem 1rem;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  font-size: .875rem;
+  line-height: 1.55;
+  cursor: pointer;
+}
+.story-consent input { margin-top: .25rem; flex-shrink: 0; }
+
+.case-status-story { margin-block: 1.25rem; display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
+.case-status-story__note { font-size: .875rem; color: var(--color-text-muted); }
+.case-status-story__text {
+  margin: 0;
+  padding: .75rem 1rem;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-surface-alt);
+  font-size: .9375rem;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
 .campaign-detail__sidebar { position: sticky; top: 5rem; display: flex; flex-direction: column; gap: 1rem; }
 
 /* Sidebar progress card */

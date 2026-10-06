@@ -1,3 +1,5 @@
+import type { PublicPatientStoryView } from './publicStory.js'
+
 export const CASE_STATUS = {
   /** Legacy open status — treated like awaiting hospital on status page */
   UNDER_REVIEW: 'UNDER_REVIEW',
@@ -35,6 +37,8 @@ export const CASE_AUDIT_EVENT = {
   HOSPITAL_CASE_VIEWED: 'HOSPITAL_CASE_VIEWED',
   HOSPITAL_CASE_APPROVED: 'HOSPITAL_CASE_APPROVED',
   HOSPITAL_CASE_REJECTED: 'HOSPITAL_CASE_REJECTED',
+  PUBLIC_STORY_CONSENTED: 'PUBLIC_STORY_CONSENTED',
+  PUBLIC_STORY_WITHDRAWN: 'PUBLIC_STORY_WITHDRAWN',
 } as const
 
 export type CaseAuditEventType =
@@ -96,6 +100,9 @@ export interface OwnerCaseView {
   lockedApproval?: LockedApprovalView
   /** Present when an approved campaign draft exists */
   campaignPublication?: CampaignPublicationView
+  /** The patient's consented public story, or null if not shared / withdrawn */
+  publicStory: PublicPatientStoryView | null
+  publicStoryWithdrawnAt: string | null
 }
 
 export interface CreateCaseResult {

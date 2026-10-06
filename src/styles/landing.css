@@ -229,6 +229,7 @@
 }
 .lp-pill--private { background: #fbe9e7; color: #a33a2b; }
 .lp-pill--public { background: var(--lp-green-bg); color: var(--lp-green); }
+.lp-pill--choice { background: #eef0fb; color: #3b46a0; }
 
 /* ── Final ───────────────────────────────────────────────────────────────── */
 .lp-final__inner {
