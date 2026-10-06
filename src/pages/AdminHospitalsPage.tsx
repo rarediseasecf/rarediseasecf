@@ -238,10 +238,11 @@ export default function AdminHospitalsPage() {
                 Milestone payouts
               </h2>
               <p className="admin-hospitals-panel__body">
-                Each reached milestone is sent from the on-chain escrow to the
-                hospital&apos;s wallet automatically, right after the donation
-                lands. If a send failed (e.g. RPC outage), retry it here — the
-                server also retries every hour. Each milestone is paid once.
+                Each crossed 25% threshold is released from the on-chain escrow
+                to the hospital&apos;s wallet by a permissionless instruction,
+                which the server sends right after the donation lands. If a send
+                failed (e.g. RPC outage), retry it here — the server also retries
+                every hour. Each milestone is paid once.
               </p>
               {published.length === 0 ? (
                 <p className="admin-hospitals-panel__body">
@@ -365,7 +366,7 @@ export default function AdminHospitalsPage() {
                   <input
                     id="h-domain"
                     className="field-input"
-                    placeholder="democare.hospital"
+                    placeholder="e.g. hospital.org"
                     value={emailDomain}
                     onChange={e => setEmailDomain(e.target.value)}
                   />
@@ -378,7 +379,7 @@ export default function AdminHospitalsPage() {
                     id="h-email"
                     type="email"
                     className="field-input"
-                    placeholder="verify@democare.hospital"
+                    placeholder="e.g. billing@hospital.org"
                     value={contactEmail}
                     onChange={e => setContactEmail(e.target.value)}
                   />

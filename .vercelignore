@@ -5,7 +5,6 @@
 data/
 dist/
 onchain/
-docs/walkthrough/
 .agents/
 skills-lock.json
 *.7z

@@ -36,8 +36,8 @@ describe('Day 1 email policy', () => {
     assert.equal(emailDomain('verify@democare.hospital'), 'democare.hospital')
   })
 
-  it('seeds three demo hospitals with non-personal domains', () => {
-    assert.equal(DEFAULT_DEMO_HOSPITALS.length, 3)
+  it('seeds one demo hospital with a non-personal domain', () => {
+    assert.equal(DEFAULT_DEMO_HOSPITALS.length, 1)
     for (const h of DEFAULT_DEMO_HOSPITALS) {
       assert.equal(isPersonalEmailDomain(h.emailDomain), false)
       assert.ok(h.contactEmail.endsWith(`@${h.emailDomain}`))

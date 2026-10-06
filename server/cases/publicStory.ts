@@ -1,32 +1,34 @@
 /**
- * Opt-in public patient story.
+ * Public patient details shown on the campaign page: name, condition and
+ * treatment (plus an optional country and story).
  *
  * Health information is only published with the explicit, informed, revocable
  * consent of the patient or their legal guardian (HIPAA authorization, GDPR
  * Art. 9(2)(a) explicit consent, and equivalent national rules). The consent
- * time and text version are recorded, and the story stops being served the
- * moment consent is withdrawn.
+ * time and text version are recorded, and the details stop being served the
+ * moment consent is withdrawn. Medical documents are never published.
  */
 import { AppError } from '../errors.js'
 import type { CaseRow, PublicPatientStoryRecord } from '../db/schema.js'
 
-export const PUBLIC_STORY_CONSENT_VERSION = 'patient-story-v1'
+export const PUBLIC_STORY_CONSENT_VERSION = 'patient-public-v2'
 
 export const PUBLIC_STORY_LIMITS = {
   displayName: 60,
   country: 60,
   condition: 120,
+  treatment: 160,
   storyMin: 20,
   story: 2000,
 } as const
 
 export interface PublicStoryInput {
-  shareStory?: unknown
   consent?: unknown
   sharedBy?: unknown
   displayName?: unknown
   country?: unknown
   condition?: unknown
+  treatment?: unknown
   story?: unknown
 }
 
@@ -44,7 +46,7 @@ const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g
 function cleanText(value: unknown, field: string, max: number, required: boolean): string | null {
   if (value === undefined || value === null || value === '') {
     if (required) {
-      throw new AppError('INVALID_PUBLIC_STORY', `${field} is required to share a public story.`, 400)
+      throw new AppError('INVALID_PUBLIC_STORY', `${field} is required.`, 400)
     }
     return null
   }
@@ -54,7 +56,7 @@ function cleanText(value: unknown, field: string, max: number, required: boolean
   const trimmed = value.replace(CONTROL_CHARS, '').trim()
   if (!trimmed) {
     if (required) {
-      throw new AppError('INVALID_PUBLIC_STORY', `${field} is required to share a public story.`, 400)
+      throw new AppError('INVALID_PUBLIC_STORY', `${field} is required.`, 400)
     }
     return null
   }
@@ -64,14 +66,12 @@ function cleanText(value: unknown, field: string, max: number, required: boolean
   return trimmed
 }
 
-/** Returns null when the submitter did not opt in. Opting in without consent is rejected. */
-export function validatePublicStoryInput(input: PublicStoryInput): PublicPatientStoryRecord | null {
-  if (!isTrue(input.shareStory)) return null
-
+/** Every new case needs consent plus the patient's public name, condition and treatment. */
+export function validatePublicStoryInput(input: PublicStoryInput): PublicPatientStoryRecord {
   if (!isTrue(input.consent)) {
     throw new AppError(
       'PUBLIC_STORY_CONSENT_REQUIRED',
-      'Tick the consent box to share your story publicly, or turn sharing off.',
+      "Tick the box to consent to the patient's name and condition being displayed publicly.",
       400
     )
   }
@@ -83,30 +83,35 @@ export function validatePublicStoryInput(input: PublicStoryInput): PublicPatient
     )
   }
 
-  const story = cleanText(input.story, 'Your story', PUBLIC_STORY_LIMITS.story, true) as string
-  if (story.length < PUBLIC_STORY_LIMITS.storyMin) {
+  const story = cleanText(input.story, 'Story', PUBLIC_STORY_LIMITS.story, false)
+  if (story !== null && story.length < PUBLIC_STORY_LIMITS.storyMin) {
     throw new AppError(
       'INVALID_PUBLIC_STORY',
-      `Your story should be at least ${PUBLIC_STORY_LIMITS.storyMin} characters.`,
+      `The story should be at least ${PUBLIC_STORY_LIMITS.storyMin} characters, or left empty.`,
       400
     )
   }
 
   return {
-    displayName: cleanText(input.displayName, 'Name to show', PUBLIC_STORY_LIMITS.displayName, true) as string,
+    displayName: cleanText(input.displayName, 'Patient name', PUBLIC_STORY_LIMITS.displayName, true) as string,
     country: cleanText(input.country, 'Country', PUBLIC_STORY_LIMITS.country, false),
-    condition: cleanText(input.condition, 'Condition', PUBLIC_STORY_LIMITS.condition, false),
+    condition: cleanText(input.condition, 'Condition', PUBLIC_STORY_LIMITS.condition, true),
+    treatment: cleanText(input.treatment, 'Treatment', PUBLIC_STORY_LIMITS.treatment, true),
     story,
     sharedBy: input.sharedBy,
   }
 }
 
-/** The story as it may be shown publicly, or null if never consented or withdrawn. */
+/** The details as they may be shown publicly, or null if never consented or withdrawn. */
 export function activePublicStory(
   row: Pick<CaseRow, 'publicStory' | 'publicStoryConsentAt' | 'publicStoryWithdrawnAt'>
 ): PublicPatientStoryView | null {
   if (!row.publicStory || !row.publicStoryConsentAt || row.publicStoryWithdrawnAt) {
     return null
   }
-  return { ...row.publicStory, consentedAt: row.publicStoryConsentAt.toISOString() }
+  return {
+    ...row.publicStory,
+    treatment: row.publicStory.treatment ?? null,
+    consentedAt: row.publicStoryConsentAt.toISOString(),
+  }
 }

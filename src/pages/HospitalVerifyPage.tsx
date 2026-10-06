@@ -341,14 +341,17 @@ export default function HospitalVerifyPage() {
               {phase.summary.publicStory && (
                 <>
                   <h2 className="hospital-verify-panel__subtitle">
-                    Public patient story
+                    Public patient details
                   </h2>
                   <blockquote className="case-status-story__text">
                     <strong>{phase.summary.publicStory.displayName}</strong>
-                    {(phase.summary.publicStory.condition || phase.summary.publicStory.country) &&
-                      ` · ${[phase.summary.publicStory.condition, phase.summary.publicStory.country].filter(Boolean).join(' · ')}`}
-                    <br />
-                    {phase.summary.publicStory.story}
+                    {` · ${[phase.summary.publicStory.condition, phase.summary.publicStory.treatment, phase.summary.publicStory.country].filter(Boolean).join(' · ')}`}
+                    {phase.summary.publicStory.story && (
+                      <>
+                        <br />
+                        {phase.summary.publicStory.story}
+                      </>
+                    )}
                   </blockquote>
                   <p className="hospital-verify-panel__note">
                     The {phase.summary.publicStory.sharedBy === 'GUARDIAN' ? 'patient’s parent or guardian' : 'patient'}{' '}
@@ -366,8 +369,8 @@ export default function HospitalVerifyPage() {
                   </h2>
                   <p className="hospital-payout__intro">
                     Released milestone funds are paid only to this destination.
-                    It is encrypted at rest and never shown on public campaign
-                    pages.
+                    The wallet address is public: it appears in every payout
+                    transaction on Solana.
                   </p>
 
                   <div className="hospital-payout__options">

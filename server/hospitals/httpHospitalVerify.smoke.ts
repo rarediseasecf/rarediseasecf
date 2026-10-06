@@ -40,11 +40,16 @@ const DEMO_USDC_PAYOUT = {
 async function main() {
   const form = new FormData()
   form.append('treatmentSummary', 'Day 4 settlement demo')
-  form.append('providerOrganizationName', 'DemoCare Specialty Hospital')
-  form.append('hospitalInstitutionalEmail', 'verify@democare.hospital')
+  form.append('providerOrganizationName', "Himalaya Children's Hospital (Demo)")
+  form.append('hospitalInstitutionalEmail', 'billing@himalaya-demo.org')
   form.append('providerCostUsdc', '4000')
   form.append('externalAssistanceUsdc', '1000')
   form.append('patientContributionUsdc', '500')
+  form.append('storyConsent', 'true')
+  form.append('storySharedBy', 'PATIENT')
+  form.append('storyDisplayName', 'Smoke Test Patient')
+  form.append('storyCondition', 'Fabry disease')
+  form.append('storyTreatment', 'Enzyme replacement therapy')
   form.append('documents', tinyPdf(), 'dx.pdf')
   form.append('documentTypes', 'DIAGNOSIS_SUMMARY')
   form.append('documents', tinyPng(), 'plan.png')
@@ -183,7 +188,7 @@ async function main() {
   if (campaign.verificationStatus !== 'VERIFIED') {
     throw new Error('public must be VERIFIED')
   }
-  if (campaign.verifiedByEmail !== 'verify@democare.hospital') {
+  if (campaign.verifiedByEmail !== 'billing@himalaya-demo.org') {
     throw new Error(`badge email ${campaign.verifiedByEmail}`)
   }
   const publicJson = JSON.stringify(campaign)

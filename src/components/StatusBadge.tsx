@@ -24,6 +24,18 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
   )
 }
 
+/** Fictional Devnet demo campaign — no real patient behind it. */
+export function DemoBadge() {
+  return (
+    <span
+      className="demo-badge"
+      title="Demonstration campaign on Solana Devnet — not a real patient"
+    >
+      DEMO
+    </span>
+  )
+}
+
 /** Hospital email trust signal — only when server says VERIFIED. */
 export function VerifiedByBadge({ email }: { email: string | null | undefined }) {
   if (!email || !email.includes('@')) return null

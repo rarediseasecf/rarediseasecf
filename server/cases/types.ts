@@ -110,14 +110,4 @@ export interface CreateCaseResult {
   rawAccessToken: string
   /** Non-production only — same URL logged as email_dev_link */
   demoVerifyUrl?: string
-  /** Devnet test inbox (aa@aa.aa) only — the hospital email shown to the submitter */
-  testInboxEmail?: TestInboxEmail
-}
-
-export interface TestInboxEmail {
-  to: string
-  hospitalDisplayName: string
-  publicCaseId: string
-  verifyUrl: string
-  expiresAt: string
 }

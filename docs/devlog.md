@@ -1,6 +1,6 @@
 # RareDiseaseCF — development log (historical)
 
-> This is the day-by-day build log, kept for history. Many notes describe earlier stages and are **out of date** (for example, milestone payouts are now sent automatically by the smart contract, and campaigns run 180 days). For the current state, see the [README](../README.md) and [PROJECT_OVERVIEW.txt](../PROJECT_OVERVIEW.txt).
+> This is the day-by-day build log, kept for history. Many notes describe earlier stages and are **out of date** (for example, each 25% tranche is now released by a permissionless instruction the moment its threshold is crossed, and campaigns run 180 days). For the current state, see the [README](../README.md) and [PROJECT_OVERVIEW.txt](../PROJECT_OVERVIEW.txt).
 
 Privacy-first healthcare crowdfunding: verified funding gaps, hospital magic-link verification, milestone escrow, and institutional settlement — never unrestricted cash to patients.
 
@@ -33,7 +33,7 @@ There is no simulated money path. The app runs on **Solana Devnet** or **Solana 
 
 In development only, if `SMTP_HOST` is not set, the hospital verify link is logged to the API console instead of emailed.
 
-**Testing on Devnet:** enter `aa@aa.aa` as the institution email. After submitting, a popup shows the hospital's verification email with its single-use link, so a tester can play the hospital. The test inbox is disabled on `mainnet-beta` (the server rejects it and deactivates the test hospital), because it would let anyone verify their own campaign.
+**Demo data on Devnet:** the only seeded institution is the fictional *Himalaya Children's Hospital (Demo)* (`billing@himalaya-demo.org`), used for one labelled demo campaign (patient "Aarav Shrestha", SMA). Links addressed to the demo domain are never emailed, and the demo hospital is deactivated on `mainnet-beta`. The earlier public test inbox was removed: it let anyone verify their own campaign.
 
 ---
 

@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit",
     "start:server": "tsx server/index.ts",
-    "test:server": "tsx --test server/config.test.ts server/hospitals/testHospital.test.ts server/auth/authService.test.ts server/cases/caseValidation.test.ts server/cases/coverImage.test.ts server/cases/publicStory.test.ts server/reviewer/approvalValidation.test.ts server/campaigns/publicCampaignSerializer.test.ts server/campaigns/publicCampaignRoutes.test.ts server/hospitals/day1.foundation.test.ts server/hospitals/day10.security.test.ts server/hospitals/magicLink.test.ts server/hospitals/payoutValidation.test.ts server/escrow/escrowService.test.ts server/milestones/milestoneState.test.ts server/chain/solanaRelayer.test.ts server/middleware/rateLimit.test.ts",
+    "test:server": "tsx --test server/config.test.ts server/hospitals/demoHospital.test.ts server/auth/authService.test.ts server/cases/caseValidation.test.ts server/cases/coverImage.test.ts server/cases/publicStory.test.ts server/reviewer/approvalValidation.test.ts server/campaigns/publicCampaignSerializer.test.ts server/campaigns/publicCampaignRoutes.test.ts server/hospitals/day1.foundation.test.ts server/hospitals/day10.security.test.ts server/hospitals/magicLink.test.ts server/hospitals/payoutValidation.test.ts server/escrow/escrowService.test.ts server/milestones/milestoneState.test.ts server/chain/solanaRelayer.test.ts server/middleware/rateLimit.test.ts",
     "smoke:case": "tsx server/cases/httpCase.smoke.ts",
     "smoke:hospital": "tsx server/hospitals/httpHospitalVerify.smoke.ts",
     "smoke:donate": "tsx server/donations/httpDonation.smoke.ts",

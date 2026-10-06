@@ -2,7 +2,7 @@ import type { ServerConfig } from './config.js'
 import type { AppStores } from './app.js'
 import { bootstrapRegistries } from './reviewer/bootstrap.js'
 import { bootstrapHospitals } from './hospitals/bootstrap.js'
-import { testHospitalEnabled } from './hospitals/testHospital.js'
+import { demoHospitalsEnabled } from './hospitals/demoHospital.js'
 
 /** Seed reviewer/provider registries and the hospital whitelist. Returns hospitals seeded. */
 export async function runStartupBootstrap(
@@ -17,7 +17,7 @@ export async function runStartupBootstrap(
   const hospitalsBootstrapped = await bootstrapHospitals(
     stores.dbHandle.db,
     config.hospitalBootstrapRecords,
-    { includeDemoHospitals: testHospitalEnabled(config.solana.cluster) }
+    { includeDemoHospitals: demoHospitalsEnabled(config.solana.cluster) }
   )
   if (config.reviewerBootstrapWallets.length === 0) {
     console.warn(

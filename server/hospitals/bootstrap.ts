@@ -1,12 +1,12 @@
 /**
  * Seed the hospital whitelist: env-configured institutions everywhere, plus
- * fictional demo institutions and the test inbox on Devnet only.
+ * the fictional demo institution on Devnet only.
  */
 import { and, eq, inArray } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { hospitalWhitelist } from '../db/schema.js'
 import { isPersonalEmailDomain } from './emailPolicy.js'
-import { TEST_HOSPITAL } from './testHospital.js'
+import { DEMO_HOSPITAL, RETIRED_DEMO_DOMAINS } from './demoHospital.js'
 
 export interface HospitalBootstrapRecord {
   displayName: string
@@ -18,23 +18,7 @@ export interface HospitalBootstrapRecord {
  * Fictional institutions, seeded on Devnet only. Their domains are not ours, so
  * on a real-money network whoever registers one could verify their own case.
  */
-export const DEFAULT_DEMO_HOSPITALS: HospitalBootstrapRecord[] = [
-  {
-    displayName: 'DemoCare Specialty Hospital',
-    emailDomain: 'democare.hospital',
-    contactEmail: 'verify@democare.hospital',
-  },
-  {
-    displayName: 'Northlake Rare Disease Clinic',
-    emailDomain: 'northlake-rdc.org',
-    contactEmail: 'pharmacy@northlake-rdc.org',
-  },
-  {
-    displayName: 'Summit Pediatric Specialty Center',
-    emailDomain: 'summitpsc.edu',
-    contactEmail: 'settlements@summitpsc.edu',
-  },
-]
+export const DEFAULT_DEMO_HOSPITALS: HospitalBootstrapRecord[] = [DEMO_HOSPITAL]
 
 export function parseHospitalBootstrapRecords(
   raw: string | undefined
@@ -90,24 +74,22 @@ export async function bootstrapHospitals(
   options: { includeDemoHospitals: boolean } = { includeDemoHospitals: false }
 ): Promise<number> {
   const now = new Date()
-  const demo = [...DEFAULT_DEMO_HOSPITALS, TEST_HOSPITAL]
+  const demo = DEFAULT_DEMO_HOSPITALS
   const records = options.includeDemoHospitals ? [...demo, ...extra] : extra
   let count = 0
 
-  if (!options.includeDemoHospitals) {
-    await db
-      .update(hospitalWhitelist)
-      .set({ isActive: false, updatedAt: now, deactivatedAt: now })
-      .where(
-        and(
-          inArray(
-            hospitalWhitelist.emailDomain,
-            demo.map(h => h.emailDomain)
-          ),
-          eq(hospitalWhitelist.isActive, true)
-        )
+  const deactivate = options.includeDemoHospitals
+    ? RETIRED_DEMO_DOMAINS
+    : [...RETIRED_DEMO_DOMAINS, ...demo.map(h => h.emailDomain)]
+  await db
+    .update(hospitalWhitelist)
+    .set({ isActive: false, updatedAt: now, deactivatedAt: now })
+    .where(
+      and(
+        inArray(hospitalWhitelist.emailDomain, deactivate),
+        eq(hospitalWhitelist.isActive, true)
       )
-  }
+    )
 
   for (const hospital of records) {
     if (isPersonalEmailDomain(hospital.emailDomain)) continue

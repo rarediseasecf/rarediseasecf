@@ -26,7 +26,14 @@ export function matchesSearch(
 }
 
 export function campaignSearchFields(c: PublicCampaign): string[] {
-  return [c.campaignId, c.title, c.summary, c.providerDisplayName]
+  return [
+    c.campaignId,
+    c.title,
+    c.summary,
+    c.providerDisplayName,
+    c.patientStory?.condition ?? '',
+    c.patientStory?.treatment ?? '',
+  ]
 }
 
 export function isExpired(expiresAt: string, now = Date.now()): boolean {

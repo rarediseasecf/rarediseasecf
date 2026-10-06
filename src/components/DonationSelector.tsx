@@ -1,9 +1,9 @@
 /**
- * DonationSelector — presets + custom, USDC (fiat coming soon), anonymous, escrow record.
+ * DonationSelector — presets + custom, USDC only (fiat shown disabled), anonymous, escrow record.
  */
 import { useState, useEffect } from 'react'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
-import { faCheck, faClock, faCopy } from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faCopy } from '@fortawesome/free-solid-svg-icons'
 import FaIcon from './FaIcon'
 import WalletSelectionDialog from './WalletSelectionDialog'
 import WalletOwnershipConfirmation from './WalletOwnershipConfirmation'
@@ -18,7 +18,7 @@ import { PublicCampaignApiError } from '../lib/publicCampaignApi'
 
 const PRESET_AMOUNTS = [5, 20, 50]
 
-type PayMethod = 'USDC' | 'FIAT'
+const FIAT_TOOLTIP = 'Fiat payments are in development — USDC only during beta.'
 
 interface DonationSelectorProps {
   campaignId: string
@@ -46,7 +46,6 @@ export default function DonationSelector({
     disconnectAccount,
   } = useWalletSession()
 
-  const [method, setMethod] = useState<PayMethod>('USDC')
   const [selected, setSelected] = useState<number | null>(20)
   const [customMode, setCustomMode] = useState(false)
   const [customAmount, setCustomAmount] = useState('')
@@ -138,34 +137,28 @@ export default function DonationSelector({
       <div className="donation-selector__method" role="group" aria-label="Payment method">
         <button
           type="button"
-          className={`btn donation-selector__method-btn${
-            method === 'USDC' ? ' donation-selector__method-btn--selected' : ''
-          }`}
-          aria-pressed={method === 'USDC'}
-          onClick={() => {
-            setMethod('USDC')
-            setReceipt(null)
-            setDonateError(null)
-          }}
+          className="btn donation-selector__method-btn donation-selector__method-btn--selected"
+          aria-pressed="true"
         >
           USDC
         </button>
-        <button
-          type="button"
-          className={`btn donation-selector__method-btn${
-            method === 'FIAT' ? ' donation-selector__method-btn--selected' : ''
-          }`}
-          aria-pressed={method === 'FIAT'}
-          onClick={() => {
-            setMethod('FIAT')
-            setReceipt(null)
-            setDonateError(null)
-          }}
-        >
-          Card / Fiat
-          <span className="donation-selector__soon">Soon</span>
-        </button>
+        <span className="donation-selector__method-disabled" title={FIAT_TOOLTIP}>
+          <button
+            type="button"
+            className="btn donation-selector__method-btn"
+            disabled
+            aria-disabled="true"
+            aria-describedby="fiat-coming-soon"
+            title={FIAT_TOOLTIP}
+          >
+            Fiat
+            <span className="donation-selector__soon">Coming soon</span>
+          </button>
+        </span>
       </div>
+      <p id="fiat-coming-soon" className="donation-selector__method-note">
+        {FIAT_TOOLTIP}
+      </p>
 
       <div className="donation-selector__presets">
         {PRESET_AMOUNTS.map(amount => (
@@ -180,7 +173,7 @@ export default function DonationSelector({
             aria-pressed={selected === amount && !customMode}
             type="button"
           >
-            {amount} {method === 'FIAT' ? 'USD' : 'USDC'}
+            {amount} USDC
           </button>
         ))}
         <button
@@ -202,7 +195,7 @@ export default function DonationSelector({
       {customMode && (
         <div className="donation-selector__custom">
           <label htmlFor="custom-amount" className="field-label">
-            Amount ({method === 'FIAT' ? 'USD' : 'USDC'})
+            Amount (USDC)
           </label>
           <input
             id="custom-amount"
@@ -279,23 +272,6 @@ export default function DonationSelector({
             Campaign raised: {receipt.amountRaisedUsdc} USDC (
             {receipt.fundingPercent}%)
           </p>
-        </div>
-      ) : method === 'FIAT' ? (
-        <div className="donation-selector__action-area">
-          <p className="donation-selector__soon-notice" role="note">
-            <FaIcon icon={faClock} />
-            <span>
-              Card and fiat donations are not supported yet — we are rolling
-              them out soon. For now, please donate with USDC.
-            </span>
-          </p>
-          <button
-            className="btn btn--primary"
-            type="button"
-            onClick={() => setMethod('USDC')}
-          >
-            Donate with USDC instead
-          </button>
         </div>
       ) : !connected ? (
         <div className="donation-selector__action-area">

@@ -103,10 +103,10 @@ and rent (~0.01 SOL per campaign).
 
 How money moves:
 
-- Hospital approves → server creates + approves the campaign on-chain with the hospital's USDC wallet (6-month / 180-day window).
+- Hospital approves → server creates + approves the campaign on-chain with the hospital's USDC wallet (180-day window).
 - Donation → the browser wallet sends USDC to the vault; the API verifies the transaction on-chain (success, correct vault, correct mint, exact amount) and rejects reused signatures. Card/fiat donations are rejected (coming soon).
 - Donation crosses 25/50/75/100% → the server immediately sends `settle_milestone` for each reached milestone; that 25% tranche goes straight to the hospital wallet and the transaction is shown in the campaign's Milestone escrow section. The instruction is permissionless (threshold checked on-chain, destination fixed), so the hospital or anyone can trigger it if the platform is down. The periodic sweep retries any payout that failed.
-- Campaign ends (6 months) → sweeper signs `release_expired_funds`; **everything raised but not yet paid out goes to the hospital** (e.g. 48% raised → 25% already paid at the milestone, the remaining 23% is paid now). Anyone can call this instruction too.
+- Campaign ends (180 days) → sweeper signs `release_expired_funds`; **everything raised but not yet paid out goes to the hospital**, so partial funding still reaches the treating hospital (e.g. 48% raised → 25% already paid at the milestone, the remaining 23% is paid now). Anyone can call this instruction too.
 
 ---
 

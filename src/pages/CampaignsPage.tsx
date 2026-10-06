@@ -21,7 +21,7 @@ import {
   type CampaignFilter,
   type CampaignSort,
 } from '../lib/campaignSearch'
-import { IS_MAINNET, NETWORK_NAME } from '../lib/network'
+import DemoDisclaimer from '../components/DemoDisclaimer'
 
 type LoadState =
   | { phase: 'loading' }
@@ -138,12 +138,7 @@ export default function CampaignsPage() {
           />
         </div>
 
-        {!IS_MAINNET && (
-          <div className="demo-label" role="note">
-            Running on {NETWORK_NAME} — donations use Devnet USDC, which has
-            no real value.
-          </div>
-        )}
+        <DemoDisclaimer />
 
         {state.phase !== 'empty' && state.phase !== 'error' && (
           <div className="campaign-finder" role="search">

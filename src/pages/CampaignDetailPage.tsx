@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import FundingProgress from '../components/FundingProgress'
-import StatusBadge, { VerifiedByBadge } from '../components/StatusBadge'
+import StatusBadge, { DemoBadge, VerifiedByBadge } from '../components/StatusBadge'
 import VerificationChecklist from '../components/VerificationChecklist'
 import DonationSelector from '../components/DonationSelector'
 import MilestoneTracker from '../components/MilestoneTracker'
@@ -195,20 +195,44 @@ export default function CampaignDetailPage() {
                 }}
               />
             )}
+            {campaign.isDemo && (
+              <div className="demo-notice" role="note">
+                <DemoBadge />
+                <span>
+                  Demonstration campaign on Solana Devnet. The patient, hospital
+                  and documents are fictional, and Devnet USDC has no real value.
+                </span>
+              </div>
+            )}
             <h1 className="campaign-detail__heading">{campaign.title}</h1>
             {campaign.patientStory ? (
               <section className="patient-story" aria-labelledby="patient-story-heading">
                 <h2 id="patient-story-heading" className="patient-story__title">
-                  {campaign.patientStory.displayName}&apos;s story
+                  About {campaign.patientStory.displayName}
                 </h2>
-                {(campaign.patientStory.country || campaign.patientStory.condition) && (
-                  <p className="patient-story__meta">
-                    {[campaign.patientStory.condition, campaign.patientStory.country]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
+                <dl className="patient-story__facts">
+                  {campaign.patientStory.condition && (
+                    <div>
+                      <dt>Condition</dt>
+                      <dd>{campaign.patientStory.condition}</dd>
+                    </div>
+                  )}
+                  {campaign.patientStory.treatment && (
+                    <div>
+                      <dt>Treatment</dt>
+                      <dd>{campaign.patientStory.treatment}</dd>
+                    </div>
+                  )}
+                  {campaign.patientStory.country && (
+                    <div>
+                      <dt>Country</dt>
+                      <dd>{campaign.patientStory.country}</dd>
+                    </div>
+                  )}
+                </dl>
+                {campaign.patientStory.story && (
+                  <p className="patient-story__text">{campaign.patientStory.story}</p>
                 )}
-                <p className="patient-story__text">{campaign.patientStory.story}</p>
                 <p className="patient-story__consent">
                   Shared by the {campaign.patientStory.sharedBy === 'GUARDIAN' ? 'patient’s parent or guardian' : 'patient'}{' '}
                   with their consent on{' '}
@@ -250,18 +274,40 @@ export default function CampaignDetailPage() {
                   </div>
                 )}
                 <div className="info-card__row">
-                  <dt>Funding target</dt>
-                  <dd>{goalDisplay} USDC</dd>
-                </div>
-                <div className="info-card__row">
                   <dt>Expiry</dt>
                   <dd>{formatCampaignExpiry(campaign.expiresAt)}</dd>
                 </div>
               </dl>
               <p className="info-card__privacy-note">
-                {campaign.patientStory
-                  ? 'Medical documents and records stay private. Only the story the family chose to share, the funding goal and the verification badge are shown.'
-                  : 'Personal treatment details and institutional banking data remain private. This page shows only the anonymized funding goal and verification badge.'}
+                Medical reports, insurance documents and the patient&apos;s ID and
+                address stay private and off-chain. Donations and payouts —
+                including the hospital&apos;s receiving wallet — are public Solana
+                transactions.
+              </p>
+            </div>
+
+            <div className="info-card">
+              <h2 className="info-card__title">Cost breakdown</h2>
+              <dl className="info-card__dl">
+                <div className="info-card__row">
+                  <dt>Total treatment cost</dt>
+                  <dd>{formatUsdcDisplay(campaign.costBreakdown.treatmentCostUsdc)} USD</dd>
+                </div>
+                <div className="info-card__row">
+                  <dt>Covered by insurance / assistance</dt>
+                  <dd>− {formatUsdcDisplay(campaign.costBreakdown.insuranceCoverageUsdc)} USD</dd>
+                </div>
+                <div className="info-card__row">
+                  <dt>Paid by the patient</dt>
+                  <dd>− {formatUsdcDisplay(campaign.costBreakdown.patientContributionUsdc)} USD</dd>
+                </div>
+                <div className="info-card__row info-card__row--total">
+                  <dt>Funding gap</dt>
+                  <dd>{goalDisplay} USDC</dd>
+                </div>
+              </dl>
+              <p className="info-card__privacy-note">
+                Gap attested by the hospital, locked by the program.
               </p>
             </div>
 
@@ -314,13 +360,13 @@ export default function CampaignDetailPage() {
             <InfoAccordion title="How campaign funding will work">
               <p>
                 USDC donations are held in an on-chain escrow for this
-                campaign. As soon as 25%, 50%, 75% or 100% of the goal is
-                raised, the smart contract sends that 25% share straight to
-                the verified hospital's wallet — no manual approval. After 6
-                months, anything still in escrow — say 23% that never reached
-                the next milestone — is sent to the hospital as well.
-                Every payout links to its Solana transaction. Card / fiat
-                donations are coming soon.
+                campaign. Each 25% tranche is released to the verified
+                hospital&apos;s wallet by a permissionless instruction the
+                moment each 25% threshold is crossed. After 180 days, anything
+                still in escrow is released to the hospital as well, so partial
+                funding still reaches the treating hospital. Every payout links
+                to its Solana transaction. Fiat payments are in development —
+                USDC only during beta.
               </p>
             </InfoAccordion>
 

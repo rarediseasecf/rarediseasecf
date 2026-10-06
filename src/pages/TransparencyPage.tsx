@@ -8,6 +8,7 @@ import MilestoneTracker from '../components/MilestoneTracker'
 import SearchBox from '../components/SearchBox'
 import Highlight from '../components/Highlight'
 import SolanaTxLink from '../components/SolanaTxLink'
+import { DemoBadge } from '../components/StatusBadge'
 import {
   fetchAllPublicCampaigns,
   type PublicCampaign,
@@ -166,8 +167,8 @@ export default function TransparencyPage() {
         <p className="transparency-eyebrow">Public transparency</p>
         <h1 className="transparency-title">Campaign storyboard</h1>
         <p className="transparency-lead">
-          Sanitized timeline from submitted → verified → milestones → settled.
-          Documents and personal medical details are never shown here.
+          Documents and personal medical details are never shown here. All
+          payouts are public Solana transactions.
         </p>
 
         <div className="transparency-layout">
@@ -218,6 +219,7 @@ export default function TransparencyPage() {
                       <span className="finder-item__id">
                         <Highlight text={r.campaignId} tokens={tokens} />
                       </span>
+                      {r.info?.isDemo && <DemoBadge />}
                       {r.expired ? (
                         <span className="finder-item__tag finder-item__tag--ended">
                           Ended
@@ -273,6 +275,15 @@ export default function TransparencyPage() {
             {detail && !loading && (
               <div className="transparency-grid">
                 <section className="info-card">
+                  {detail.isDemo && (
+                    <div className="demo-notice" role="note">
+                      <DemoBadge />
+                      <span>
+                        Demonstration campaign on Solana Devnet — fictional
+                        patient and hospital.
+                      </span>
+                    </div>
+                  )}
                   <h2 className="info-card__title">{detail.title}</h2>
                   <p>{detail.summary}</p>
                   <p>

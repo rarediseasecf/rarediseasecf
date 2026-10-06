@@ -47,25 +47,27 @@ RareDiseaseCF fixes each problem with a specific mechanism:
   Trust        -> The patient's own hospital verifies the case through a secure,
                   single-use email link sent only to a whitelisted hospital
                   address. Verified campaigns show a badge such as
-                  "Verified by verify@democare.hospital".
+                  "Verified by billing@hospital.org".
 
-  Right amount -> The server calculates the funding gap. It is never typed in
-                  freely:
+  Right amount -> The funding gap is never typed in freely:
                       Funding gap = treatment cost
                                     - external assistance (insurance, grants)
                                     - patient's own contribution
-                  The hospital confirms these figures and the goal is then
-                  locked.
+                  Gap attested by the hospital, locked by the program.
 
-  Fund safety  -> Donations are held in escrow and released in four milestones
-                  (25%, 50%, 75%, 100%). Each release needs an explicit
-                  approval, and the money goes to the hospital or provider, not
-                  to the patient.
+  Fund safety  -> Donations are held in escrow and released in four 25%
+                  tranches, each by a permissionless instruction the moment
+                  its threshold is crossed. The money goes only to the
+                  hospital wallet registered for the campaign, not to the
+                  patient. During the Devnet beta the team still holds the
+                  program's upgrade key.
 
   Privacy      -> Medical documents are encrypted and only the verifying
-                  hospital can see them. The public sees a generic campaign
-                  title, the verified goal, progress, and a sanitized timeline.
-                  No health data is ever put on the blockchain.
+                  hospital can see them. With the patient's or guardian's
+                  consent, the site shows the patient's name, condition,
+                  treatment and funding gap. Donations and payouts, including
+                  the hospital's receiving wallet, are public on Solana. No
+                  health data is ever put on the blockchain.
 
   Transparency -> A public transparency page shows each campaign's life story
                   (submitted, verified, published, donations, milestones
@@ -96,7 +98,8 @@ RareDiseaseCF fixes each problem with a specific mechanism:
 
   4. Platform admin
      Manages the hospital whitelist and publishes campaigns. Milestone
-     payouts are automatic; the admin page only offers a manual retry.
+     payouts are sent by the server right after each donation (anyone may
+     send them); the admin page only offers a manual retry.
 
   5. Provider (optional on-chain path)
      A registered care provider confirms fulfillment of treatment before the
@@ -108,10 +111,11 @@ RareDiseaseCF fixes each problem with a specific mechanism:
 --------------------------------------------------------------------------------
 
   Step 1  Submit
-          The patient fills a 4-step form: treatment need, cost and institution,
-          assistance, then an optional campaign photo and the documents. The
-          photo is shown publicly, so the form warns not to use documents or
-          anything identifying; location/camera data is removed automatically.
+          The patient fills a 5-step form: treatment need, cost and institution,
+          assistance, public details (patient name, condition, treatment and a
+          required consent box), then an optional campaign photo and the
+          documents. The photo is shown publicly, so the form warns not to use
+          documents or anything identifying; location/camera data is stripped.
           The hospital email must be an
           institutional address; Gmail, Yahoo, Outlook and similar personal
           domains are rejected. The case gets a short 5-letter ID
@@ -130,8 +134,8 @@ RareDiseaseCF fixes each problem with a specific mechanism:
           for the institution's Solana wallet address, which is checked and
           stored encrypted; Fiat (bank transfer) shows a "not supported yet,
           rolling out soon" notice. On approval the funding gap is locked, the campaign
-          is created with four LOCKED milestones and a 180-day (6-month)
-          window, and it is published with the verified badge. In on-chain
+          is created with four LOCKED milestones and a 180-day window, and it
+          is published with the verified badge. In on-chain
           mode the server also creates the campaign escrow on Solana, bound to
           the hospital's wallet. A case with a zero funding gap cannot be
           approved.
@@ -144,35 +148,34 @@ RareDiseaseCF fixes each problem with a specific mechanism:
           amount) before counting it, and never counts the same transaction
           twice.
 
-  Step 5  Milestones release instantly
-          The moment a donation takes the amount raised past 25% of the goal,
-          that 25% share is sent from the escrow vault straight to the
-          hospital's registered wallet by the smart contract (settle_milestone,
-          no fee, no manual approval). The same happens at 50%, 75%, and 100%.
-          The contract checks the threshold itself and only pays the
-          hospital's wallet, so anyone can trigger it; the server does so
-          right after each donation and retries hourly if a send fails. Each
+  Step 5  Milestone tranches
+          Each 25% tranche is released by a permissionless instruction
+          (settle_milestone) the moment each 25% threshold is crossed. The
+          program checks the threshold itself and only pays the hospital's
+          registered wallet, so anyone can send the instruction; the server
+          sends it right after each donation and retries hourly if a send
+          fails. The same applies at 50%, 75%, and 100%. Each
           payout is recorded as e.g. SETTLE-K7MQP-25 with its transaction
           signature, and the Milestone escrow section links to it on Solana
           Explorer. Paying the same milestone twice is blocked, and the total
           paid can never exceed what was raised or the goal.
 
-  Step 6  Campaign ends (6-month rule)
-          When the 6 months are up, everything raised but not yet paid out
-          goes to the hospital - even if the next milestone was never reached.
+  Step 6  Campaign ends (180-day rule)
+          After 180 days, everything raised but not yet paid out goes to the
+          hospital, so partial funding still reaches the treating hospital.
           Example: if 48% was raised, 25% was already paid at the milestone
-          and the remaining 23% is sent now. The smart contract enforces this
-          (release_expired_funds): anyone can trigger it, but the money can
-          only go to the hospital's wallet, so it can never get stuck. The
-          server triggers it automatically every hour, and the Milestone
-          escrow section shows it with a Solana Explorer link.
+          and the remaining 23% is sent now. The program enforces this
+          (release_expired_funds): anyone can send it, but the money can only
+          go to the hospital's wallet. The server sends it in an hourly sweep,
+          and the Milestone escrow section shows it with a Solana Explorer
+          link.
 
   Step 7  Transparency
           Every step appears on the public timeline in plain, non-medical
           language.
 
   Milestone lifecycle:  LOCKED -> ELIGIBLE -> APPROVED -> SETTLED
-                        (the last three happen back-to-back, automatically)
+                        (the last three happen back-to-back, in one sweep)
 
 
 --------------------------------------------------------------------------------
@@ -236,14 +239,15 @@ The system has three layers plus a database:
 
 6.1 Frontend pages (src/pages)
 ------------------------------
-  HomePage                Product landing: hero with an autoplaying walkthrough
-                          video (link to the full video), open campaigns, how
-                          it works (4 steps), a live payout ledger showing a
-                          real campaign's milestone payouts with Solana
-                          Explorer links, a private-vs-public table, and a
-                          closing call to action.
-  SubmitPage              4-step private case submission with document upload
-                          and an optional public campaign photo.
+  HomePage                Product landing: hero with a worked cost-breakdown
+                          example, open campaigns, how it works (4 steps), a
+                          live payout ledger showing a real campaign's
+                          milestone payouts with Solana Explorer links, a
+                          public-vs-private table, and a closing call to
+                          action.
+  SubmitPage              5-step case submission with document upload, the
+                          patient's public details and required consent, and
+                          an optional public campaign photo.
   CaseStatusPage          Private status page for the patient, protected by a
                           secure browser cookie.
   HospitalVerifyPage      Magic-link portal where the hospital reviews
@@ -285,8 +289,6 @@ The system has three layers plus a database:
   VerificationChecklist        What has been verified for a campaign.
   SearchBox / Highlight        Campaign search input ("/" to focus, Esc to
                                clear) and highlighting of matched text.
-  TestInboxEmailModal          Devnet test inbox: shows the hospital
-                               verification email in the browser.
   Modal, InfoAccordion,
   SectionHeading               Shared layout pieces.
   PrivacyNotice                Explains what stays private.
@@ -399,8 +401,9 @@ The system has three layers plus a database:
     - The payout amount is always the locked gap, the milestone tranche, or
       (after expiry) the remaining vault balance - never an amount chosen by
       the caller.
-    - Campaigns last at most 180 days (6 months). No donor refunds: at the end, the
-      hospital receives whatever was raised.
+    - Campaigns last at most 180 days. No donor refunds: at the end, the
+      hospital receives whatever was raised, so partial funding still reaches
+      the treating hospital.
     - A second settlement of the same payment fails.
     - No health information is stored on-chain.
 
@@ -455,10 +458,10 @@ The system has three layers plus a database:
   Development convenience
     - Without SMTP configured (development only), the hospital verify link
       is logged to the server console instead of emailed
-    - Test hospital inbox (Devnet only): using aa@aa.aa as the hospital
-      email shows the verification email straight to the submitter, so
-      anyone can try the full flow without a real hospital. It is switched
-      off automatically on Mainnet.
+    - Demo institution (Devnet only): "Himalaya Children's Hospital (Demo)"
+      (billing@himalaya-demo.org) is whitelisted for the labelled demo
+      campaign. Links addressed to it are never emailed, and it is
+      deactivated automatically on Mainnet.
 
   Not automated
     - Medical document authenticity checks (the hospital verifies)
@@ -476,25 +479,17 @@ The system has three layers plus a database:
 9. WALKTHROUGH
 --------------------------------------------------------------------------------
 
-    1. Submit a case at /submit, including a campaign photo. On Devnet, use
-       aa@aa.aa as the hospital email to get the test inbox.
-    2. Open the hospital verification link (from the test inbox, the email,
-       or the API log during local development). Review, pick USDC payout,
-       approve.
-    3. The campaign goes live on /campaigns with its photo and verified badge.
-    4. Donate at least 25% of the goal: the 25% milestone is sent to the
-       hospital wallet automatically and shows "Sent" with a View on Solana
-       link in the Milestone escrow section.
+    1. Submit a case at /submit, including the patient's public name,
+       condition and treatment and the required public-display consent.
+    2. Open the hospital verification link (from the email, or the API log
+       during local development). Review, pick USDC payout, approve.
+    3. The campaign goes live on /campaigns with its verified badge.
+    4. Donate at least 25% of the goal: the 25% tranche is released to the
+       hospital wallet by a permissionless instruction the moment the
+       threshold is crossed, and shows "Sent" with a View on Solana link in
+       the Milestone escrow section.
     5. Open the transparency page: the donation and released milestone appear,
        with no medical documents shown.
-
-  Recorded walkthrough of this flow (about 1 minute):
-    public/walkthrough/walkthrough.mp4       full video (also linked from the
-                                             landing page as "Full video")
-    public/walkthrough/walkthrough-hero.mp4  cropped version used in the
-                                             landing page hero
-    docs/walkthrough/                        MP4, GIF, and the source frames
-
 
 --------------------------------------------------------------------------------
 10. SUGGESTED NARRATION FOR AN AI DEMO VIDEO
@@ -512,9 +507,10 @@ The system has three layers plus a database:
   and donations are released in milestones directly to the care provider."
 
   [Scene 3 - Patient submits]
-  "A patient or caregiver submits a case privately. No crypto wallet needed.
-  They enter treatment costs, insurance or assistance, their own contribution,
-  and upload documents. Only an institutional hospital email is accepted."
+  "A patient or caregiver submits a case. No crypto wallet needed. They enter
+  treatment costs, insurance or assistance, their own contribution, and upload
+  documents, which stay private. They consent to the patient's name and
+  condition being shown. Only an institutional hospital email is accepted."
 
   [Scene 4 - Hospital verifies]
   "The hospital receives a secure, single-use link that expires in 24 hours.
@@ -528,11 +524,12 @@ The system has three layers plus a database:
   show exactly where the campaign stands."
 
   [Scene 6 - Milestone escrow]
-  "Funds sit in escrow. The moment the campaign reaches 25, 50, 75, or 100
-  percent, the smart contract sends that 25 percent share straight to the
-  hospital's registered USDC wallet - and each payout links to its Solana
-  transaction. After six months, whatever is left goes to the hospital too.
-  Double payouts and overpayments are blocked."
+  "Funds sit in escrow. Each 25 percent tranche is released to the hospital's
+  registered USDC wallet by a permissionless instruction the moment its
+  threshold is crossed, and each payout links to its Solana transaction.
+  After 180 days, whatever is left goes to the hospital too, so partial
+  funding still reaches the treating hospital. Double payouts and
+  overpayments are blocked."
 
   [Scene 7 - Transparency and privacy]
   "Anyone can follow a campaign's full journey on the transparency page, from

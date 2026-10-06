@@ -22,11 +22,16 @@ function tinyPng(): Blob {
 async function main() {
   const form = new FormData()
   form.append('treatmentSummary', 'Demo enzyme replacement therapy')
-  form.append('providerOrganizationName', 'DemoCare Specialty Hospital')
-  form.append('hospitalInstitutionalEmail', 'verify@democare.hospital')
+  form.append('providerOrganizationName', "Himalaya Children's Hospital (Demo)")
+  form.append('hospitalInstitutionalEmail', 'billing@himalaya-demo.org')
   form.append('providerCostUsdc', '5000')
   form.append('externalAssistanceUsdc', '2000')
   form.append('patientContributionUsdc', '500')
+  form.append('storyConsent', 'true')
+  form.append('storySharedBy', 'GUARDIAN')
+  form.append('storyDisplayName', 'Smoke Test Patient')
+  form.append('storyCondition', 'Gaucher disease')
+  form.append('storyTreatment', 'Enzyme replacement therapy')
   form.append('documents', tinyPdf(), 'diagnosis-demo.pdf')
   form.append('documentTypes', 'DIAGNOSIS_SUMMARY')
   form.append('documents', tinyPng(), 'plan-demo.png')
@@ -66,7 +71,7 @@ async function main() {
   if (!created.documents || created.documents.length < 2) {
     throw new Error('expected ≥2 documents in response')
   }
-  if (created.hospitalInstitutionalEmail !== 'verify@democare.hospital') {
+  if (created.hospitalInstitutionalEmail !== 'billing@himalaya-demo.org') {
     throw new Error('hospital email missing from owner view')
   }
 

@@ -74,6 +74,20 @@ describe('public campaign serializer', () => {
     assert.doesNotMatch(json, /AxXcSensitive/)
   })
 
+  it('flags demo-hospital campaigns and exposes the attested cost breakdown', () => {
+    const real = serializePublicCampaign(baseDraft())
+    assert.equal(real.isDemo, false)
+    assert.deepEqual(real.costBreakdown, {
+      treatmentCostUsdc: '5000',
+      insuranceCoverageUsdc: '2000',
+      patientContributionUsdc: '500',
+    })
+    const demo = serializePublicCampaign(
+      baseDraft({ verifierEmail: 'billing@himalaya-demo.org' })
+    )
+    assert.equal(demo.isDemo, true)
+  })
+
   it('exposes only a relative image path when a cover image exists', () => {
     assert.equal(serializePublicCampaign(baseDraft()).coverImageUrl, null)
     const view = serializePublicCampaign(baseDraft(), [], { hasCoverImage: true })

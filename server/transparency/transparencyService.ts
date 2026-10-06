@@ -8,12 +8,15 @@ import {
   campaignDrafts,
   campaignMilestones,
   caseAuditEvents,
+  cases,
   donations,
   settlements,
 } from '../db/schema.js'
 import { AppError } from '../errors.js'
 import { formatMinorUnitsAsUsdc } from '../utils/money.js'
 import { CAMPAIGN_PUBLICATION_STATUS } from '../campaigns/publicCampaignSerializer.js'
+import { activePublicStory } from '../cases/publicStory.js'
+import { isDemoHospitalEmail } from '../hospitals/demoHospital.js'
 import { MilestoneService } from '../milestones/milestoneService.js'
 import { publicDonationTx } from '../donations/publicDonationTx.js'
 
@@ -57,7 +60,7 @@ function sanitizeTimelineLabel(eventType: string): {
     case 'HOSPITAL_CASE_APPROVED':
       return {
         title: 'Hospital verified',
-        body: 'The institution verified the funding gap. Verified badge may appear on the campaign.',
+        body: 'The institution attested the funding gap; the program locked it as the campaign goal.',
       }
     case 'HOSPITAL_CASE_REJECTED':
       return {
@@ -87,7 +90,7 @@ function sanitizeTimelineLabel(eventType: string): {
     case 'MILESTONE_ELIGIBLE':
       return {
         title: 'Milestone reached',
-        body: 'Raised funds met a milestone threshold — the tranche is released to the hospital automatically.',
+        body: 'Raised funds crossed a 25% threshold. The tranche is released to the hospital by a permissionless instruction.',
       }
     case 'MILESTONE_APPROVED':
       return {
@@ -143,16 +146,29 @@ export class TransparencyService {
     Array<{ campaignId: string; title: string; expired: boolean }>
   > {
     const rows = await this.db
-      .select()
+      .select({
+        campaignId: campaignDrafts.campaignId,
+        publicTitle: campaignDrafts.publicTitle,
+        expiresAt: campaignDrafts.expiresAt,
+        publicStory: cases.publicStory,
+        publicStoryConsentAt: cases.publicStoryConsentAt,
+        publicStoryWithdrawnAt: cases.publicStoryWithdrawnAt,
+      })
       .from(campaignDrafts)
+      .leftJoin(cases, eq(cases.id, campaignDrafts.caseId))
       .where(eq(campaignDrafts.status, CAMPAIGN_PUBLICATION_STATUS.PUBLISHED))
       .orderBy(desc(campaignDrafts.publishedAt))
     const now = Date.now()
-    return rows.map(r => ({
-      campaignId: r.campaignId,
-      title: r.publicTitle ?? 'Verified treatment campaign',
-      expired: r.expiresAt.getTime() <= now,
-    }))
+    return rows.map(r => {
+      const story = activePublicStory(r)
+      return {
+        campaignId: r.campaignId,
+        title: story
+          ? `Help ${story.displayName} get treatment`
+          : (r.publicTitle ?? 'Verified treatment campaign'),
+        expired: r.expiresAt.getTime() <= now,
+      }
+    })
   }
 
   async getCampaignTransparency(campaignId: string): Promise<{
@@ -167,6 +183,7 @@ export class TransparencyService {
     expired: boolean
     verificationStatus: string
     verifiedByEmail: string | null
+    isDemo: boolean
     timeline: TransparencyTimelineEvent[]
     updates: TransparencyUpdate[]
     milestones: Awaited<
@@ -182,9 +199,17 @@ export class TransparencyService {
     const milestones = await this.milestones.listPublicForDraft(draft.id)
     const finalRelease = await this.milestones.finalReleaseForDraft(draft.id)
     const leaderboard = await this.leaderboard(draft.campaignId)
+    const [caseRow] = await this.db
+      .select({
+        publicStory: cases.publicStory,
+        publicStoryConsentAt: cases.publicStoryConsentAt,
+        publicStoryWithdrawnAt: cases.publicStoryWithdrawnAt,
+      })
+      .from(cases)
+      .where(eq(cases.id, draft.caseId))
+      .limit(1)
+    const patientStory = caseRow ? activePublicStory(caseRow) : null
 
-    const remaining =
-      draft.verifiedFundingGapMinor - draft.amountRaisedMinor
     const fundingPercent =
       draft.verifiedFundingGapMinor <= 0n
         ? 0
@@ -219,7 +244,9 @@ export class TransparencyService {
 
     return {
       campaignId: draft.campaignId,
-      title: draft.publicTitle ?? 'Help fund verified treatment',
+      title: patientStory
+        ? `Help ${patientStory.displayName} get treatment`
+        : (draft.publicTitle ?? 'Help fund verified treatment'),
       summary:
         draft.publicSummary ??
         'Verified healthcare funding campaign. Personal details remain private.',
@@ -233,6 +260,7 @@ export class TransparencyService {
       expired: draft.expiresAt.getTime() <= Date.now(),
       verificationStatus: isVerified ? 'VERIFIED' : 'UNVERIFIED',
       verifiedByEmail: isVerified ? draft.verifierEmail : null,
+      isDemo: isDemoHospitalEmail(draft.verifierEmail),
       timeline,
       updates,
       milestones,

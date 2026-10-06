@@ -10,6 +10,7 @@ import type {
   PublicMilestoneView,
 } from '../milestones/milestoneService.js'
 import type { PublicPatientStoryView } from '../cases/publicStory.js'
+import { isDemoHospitalEmail } from '../hospitals/demoHospital.js'
 
 export const CAMPAIGN_PUBLICATION_STATUS = {
   APPROVED_NOT_PUBLISHED: 'APPROVED_NOT_PUBLISHED',
@@ -22,7 +23,7 @@ export type CampaignPublicationStatus =
 export const PUBLIC_CAMPAIGN_TITLE = 'Help fund verified treatment'
 
 export const PUBLIC_CAMPAIGN_SUMMARY =
-  'This campaign supports a verified healthcare need. Personal treatment details remain private while the reviewed funding goal and campaign progress stay transparent.'
+  'The treating hospital verified this funding gap. Medical documents stay private and off-chain; the funding goal, donations and payouts are public.'
 
 export interface PublicCampaignView {
   campaignId: string
@@ -39,6 +40,14 @@ export interface PublicCampaignView {
   /** Only set when verificationStatus is VERIFIED — never bank data */
   verificationStatus: 'VERIFIED' | 'UNVERIFIED'
   verifiedByEmail: string | null
+  /** Verified by the fictional Devnet demo hospital — not a real patient */
+  isDemo: boolean
+  /** Amounts the hospital attested; the goal is cost − insurance − contribution */
+  costBreakdown: {
+    treatmentCostUsdc: string
+    insuranceCoverageUsdc: string
+    patientContributionUsdc: string
+  }
   milestones: PublicMilestoneView[]
   /** Funds left in escrow at the end date, paid to the hospital on-chain */
   finalRelease: PublicFinalReleaseView | null
@@ -106,6 +115,16 @@ export function serializePublicCampaign(
     publishedAt: draft.publishedAt.toISOString(),
     verificationStatus: isVerified ? 'VERIFIED' : 'UNVERIFIED',
     verifiedByEmail: isVerified ? draft.verifierEmail : null,
+    isDemo: isDemoHospitalEmail(draft.verifierEmail),
+    costBreakdown: {
+      treatmentCostUsdc: formatMinorUnitsAsUsdc(draft.approvedProviderCostMinor),
+      insuranceCoverageUsdc: formatMinorUnitsAsUsdc(
+        draft.verifiedExternalAssistanceMinor
+      ),
+      patientContributionUsdc: formatMinorUnitsAsUsdc(
+        draft.patientContributionMinor
+      ),
+    },
     milestones,
     finalRelease: options.finalRelease ?? null,
     coverImageUrl: options.hasCoverImage

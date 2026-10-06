@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { NETWORK_NAME } from '../lib/network'
+import { IS_MAINNET, NETWORK_NAME } from '../lib/network'
+import { DEMO_DISCLAIMER } from './DemoDisclaimer'
 
 export default function SiteFooter() {
   return (
@@ -20,11 +21,25 @@ export default function SiteFooter() {
         <p className="site-footer__tagline">
           Verified healthcare funding with on-chain USDC escrow · {NETWORK_NAME}
         </p>
+        {!IS_MAINNET && (
+          <p className="site-footer__disclaimer">{DEMO_DISCLAIMER}</p>
+        )}
 
         <nav className="site-footer__links" aria-label="Footer navigation">
           <Link to="/privacy" className="footer-link">Privacy</Link>
           <Link to="/#how-it-works" className="footer-link">How it works</Link>
           <Link to="/contact" className="footer-link">Contact</Link>
+          <span className="footer-link-group">
+            <span className="footer-link-group__label">Source code</span>
+            <a
+              href="https://github.com/"
+              className="footer-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub (coming soon)
+            </a>
+          </span>
         </nav>
       </div>
     </footer>

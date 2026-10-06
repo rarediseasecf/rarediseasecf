@@ -23,7 +23,9 @@ export interface PublicPatientStoryRecord {
   displayName: string
   country: string | null
   condition: string | null
-  story: string
+  /** Absent on stories recorded before treatment became a public field */
+  treatment?: string | null
+  story: string | null
   sharedBy: 'PATIENT' | 'GUARDIAN'
 }
 

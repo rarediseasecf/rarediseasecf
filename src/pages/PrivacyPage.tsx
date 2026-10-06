@@ -7,7 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import FaIcon from '../components/FaIcon'
 
-const LAST_UPDATED = 'September 25, 2026'
+const LAST_UPDATED = 'October 6, 2026'
 const CONTACT_EMAIL =
   import.meta.env.VITE_PRIVACY_CONTACT_EMAIL?.trim() ||
   'privacy@rarediseasecf.org'
@@ -121,11 +121,28 @@ export default function PrivacyPage() {
         <section className="legal__section">
           <h2>3. What is public and what is private</h2>
           <p>
-            <strong>Public:</strong> an opaque campaign ID (for example{' '}
-            <code>K7MQP</code>), the verified funding target, amount raised,
-            milestone progress, a “Verified by hospital” badge, donor display
-            names (or “Anonymous”) and blockchain transactions, including the
-            hospital’s payout wallet address.
+            <strong>Public on the site:</strong> the patient’s name, condition
+            (disease) and treatment, the hospital-attested cost breakdown and
+            funding gap, the campaign ID (for example <code>K7MQP</code>),
+            amount raised, milestone progress, the “Verified by hospital” badge
+            and donor display names (or “Anonymous”).
+          </p>
+          <p>
+            <strong>Public on Solana:</strong> donations, payouts and the
+            hospital’s receiving wallet address, which is visible in every
+            payout transaction.
+          </p>
+          <p>
+            <strong>Consent:</strong> a case cannot be submitted unless the
+            patient, or their parent or legal guardian, ticks a box consenting
+            to the patient’s name and condition being displayed publicly. We
+            record when they agreed and which consent text they saw, and the
+            hospital sees these details before the campaign goes live. Consent
+            can be withdrawn at any time from the case page — we then delete the
+            public details and stop showing them, although copies others already
+            made cannot be recalled. This follows the explicit-consent rule that
+            health-privacy laws share, including HIPAA (US), GDPR (EU/UK),
+            India’s DPDP Act and Nepal’s Privacy Act.
           </p>
           <p>
             <strong>Campaign photo (optional):</strong> if you add one, it is
@@ -134,21 +151,13 @@ export default function PrivacyPage() {
             and the hospital sees it before it goes live.
           </p>
           <p>
-            <strong>Patient story (optional, your choice):</strong> the patient,
-            or their parent or legal guardian, can choose to show a name, country,
-            condition and short story on the campaign page. Nothing is shown
-            unless you opt in and tick an explicit consent box; we record when you
-            agreed and which consent text you saw. The hospital sees the story
-            before the campaign goes live. You can withdraw at any time from your
-            case page — we then delete the story and stop showing it, although
-            copies others already made cannot be recalled. This follows the
-            explicit-consent rule that health-privacy laws share, including HIPAA
-            (US), GDPR (EU/UK), India’s DPDP Act and Nepal’s Privacy Act.
+            <strong>Optional:</strong> a country and a short story, shown only
+            if you fill them in.
           </p>
           <p>
-            <strong>Never public:</strong> medical documents and records,
-            treatment details you did not choose to share, the hospital’s email
-            address and bank or payout details beyond the on-chain wallet.
+            <strong>Private (off-chain):</strong> medical reports, hospital stamp
+            images, insurance documents, the patient’s ID and address, the
+            private treatment summary and the hospital’s email address.
           </p>
         </section>
 
@@ -158,8 +167,9 @@ export default function PrivacyPage() {
             Donations are held in an on-chain escrow on Solana. The chain
             stores only the campaign ID, amounts, and the hospital’s payout
             wallet. Escrowed funds can only go to that hospital wallet —
-            either as milestones are reached, or all at once when the
-            campaign ends (about 6 months after approval). Blockchain records
+            either as each 25% milestone is crossed, or, 180 days after
+            approval, whatever remains, so partial funding still reaches the
+            treating hospital. Blockchain records
             are public and permanent and cannot be deleted by anyone,
             including us.
           </p>
@@ -230,6 +240,7 @@ export default function PrivacyPage() {
           <ul>
             <li>Ask for a copy of the information we hold about you.</li>
             <li>Ask us to correct or delete it (subject to the limits above).</li>
+            <li>Withdraw consent to the patient’s public details from your case page.</li>
             <li>Donate anonymously.</li>
             <li>Withdraw a case before it is verified by contacting us.</li>
           </ul>

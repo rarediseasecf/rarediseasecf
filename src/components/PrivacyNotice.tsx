@@ -8,7 +8,7 @@ interface PrivacyNoticeProps {
 
 export default function PrivacyNotice({
   variant = 'inline',
-  text = 'Personal treatment documents are reviewed privately and are never shown on this campaign page.',
+  text = 'Medical documents are reviewed privately by the hospital and are never shown on this campaign page or written on-chain.',
 }: PrivacyNoticeProps) {
   return (
     <div className={`privacy-notice privacy-notice--${variant}`} role="note">

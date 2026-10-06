@@ -9,10 +9,6 @@ import {
 import { generatePublicCaseId } from '../utils/caseId.js'
 import { AppError } from '../errors.js'
 import { emailDomain } from '../hospitals/emailPolicy.js'
-import {
-  isTestHospitalEmail,
-  testHospitalEnabled,
-} from '../hospitals/testHospital.js'
 import type { HospitalVerifyService } from '../hospitals/hospitalVerifyService.js'
 import type { HospitalRepository } from '../hospitals/hospitalRepository.js'
 import { CaseRepository } from './caseRepository.js'
@@ -73,14 +69,6 @@ export class CaseService {
       : undefined
 
     const email = validated.privatePayload.hospitalInstitutionalEmail
-    const isTestInbox = isTestHospitalEmail(email)
-    if (isTestInbox && !testHospitalEnabled(this.config.solana.cluster)) {
-      throw new AppError(
-        'TEST_EMAIL_DEVNET_ONLY',
-        'The test email only works on Devnet. Use your hospital’s institutional email.',
-        400
-      )
-    }
     const domain = emailDomain(email) ?? ''
     const hospital = await this.hospitalRepo.findActiveForEmail(email, domain)
     if (!hospital) {
@@ -125,13 +113,9 @@ export class CaseService {
       privatePayloadIv: encrypted.iv,
       privatePayloadAuthTag: encrypted.authTag,
       schemaVersion: 2,
-      ...(publicStory
-        ? {
-            publicStory,
-            publicStoryConsentAt: now,
-            publicStoryConsentVersion: PUBLIC_STORY_CONSENT_VERSION,
-          }
-        : {}),
+      publicStory,
+      publicStoryConsentAt: now,
+      publicStoryConsentVersion: PUBLIC_STORY_CONSENT_VERSION,
     })
 
     const documentRows = []
@@ -210,17 +194,15 @@ export class CaseService {
         types: documentRows.map(d => d.documentType),
       },
     })
-    if (publicStory) {
-      await this.repo.insertAuditEvent({
-        caseId: caseRow.id,
-        eventType: CASE_AUDIT_EVENT.PUBLIC_STORY_CONSENTED,
-        createdAt: now,
-        metadataJson: {
-          consentVersion: PUBLIC_STORY_CONSENT_VERSION,
-          sharedBy: publicStory.sharedBy,
-        },
-      })
-    }
+    await this.repo.insertAuditEvent({
+      caseId: caseRow.id,
+      eventType: CASE_AUDIT_EVENT.PUBLIC_STORY_CONSENTED,
+      createdAt: now,
+      metadataJson: {
+        consentVersion: PUBLIC_STORY_CONSENT_VERSION,
+        sharedBy: publicStory.sharedBy,
+      },
+    })
     await this.repo.insertAuditEvent({
       caseId: caseRow.id,
       eventType: CASE_AUDIT_EVENT.CASE_ACCESS_SESSION_CREATED,
@@ -228,7 +210,7 @@ export class CaseService {
       metadataJson: { expiresAt: expiresAt.toISOString() },
     })
 
-    const { verifyUrl, expiresAt: linkExpiresAt } = await this.hospitalVerify.issueAndDeliver({
+    const { verifyUrl } = await this.hospitalVerify.issueAndDeliver({
       caseRow,
       hospitalId: hospital.id,
       hospitalDisplayName: hospital.displayName,
@@ -253,17 +235,6 @@ export class CaseService {
       ),
       rawAccessToken,
       ...(this.config.isProduction ? {} : { demoVerifyUrl: verifyUrl }),
-      ...(isTestInbox
-        ? {
-            testInboxEmail: {
-              to: email,
-              hospitalDisplayName: hospital.displayName,
-              publicCaseId,
-              verifyUrl,
-              expiresAt: linkExpiresAt.toISOString(),
-            },
-          }
-        : {}),
     }
   }
 

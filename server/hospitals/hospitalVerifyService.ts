@@ -27,7 +27,7 @@ import {
   verifyMagicLinkToken,
 } from './magicLink.js'
 import { deliverHospitalVerifyEmail } from './emailDelivery.js'
-import { isTestHospitalEmail, testHospitalEnabled } from './testHospital.js'
+import { demoHospitalsEnabled, isDemoHospitalEmail } from './demoHospital.js'
 import { activePublicStory, type PublicPatientStoryView } from '../cases/publicStory.js'
 import {
   isHospitalApproveReason,
@@ -103,7 +103,7 @@ export class HospitalVerifyService {
       issued.rawToken
     )
 
-    if (!isTestHospitalEmail(opts.recipientEmail)) {
+    if (!isDemoHospitalEmail(opts.recipientEmail)) {
       await deliverHospitalVerifyEmail(this.config, {
         to: opts.recipientEmail,
         verifyUrl,
@@ -199,12 +199,12 @@ export class HospitalVerifyService {
       )
     }
     if (
-      isTestHospitalEmail(tokenRow.recipientEmail) &&
-      !testHospitalEnabled(this.config.solana.cluster)
+      isDemoHospitalEmail(tokenRow.recipientEmail) &&
+      !demoHospitalsEnabled(this.config.solana.cluster)
     ) {
       throw new AppError(
-        'TEST_EMAIL_DEVNET_ONLY',
-        'Test verification links only work on Devnet.',
+        'DEMO_HOSPITAL_DEVNET_ONLY',
+        'Demo hospital verification links only work on Devnet.',
         403
       )
     }

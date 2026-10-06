@@ -145,7 +145,7 @@ export default function CaseStatusPage() {
   const [storyError, setStoryError] = useState<string | null>(null)
 
   async function handleWithdrawStory() {
-    if (!window.confirm('Remove your story from the public campaign page? This deletes it and cannot be undone.')) {
+    if (!window.confirm("Withdraw consent and remove the patient's name, condition and story from the public campaign page? This cannot be undone.")) {
       return
     }
     setWithdrawing(true)
@@ -154,7 +154,7 @@ export default function CaseStatusPage() {
       const view = await withdrawPublicStory()
       setState({ phase: 'ready', view })
     } catch {
-      setStoryError('We could not remove your story. Please try again.')
+      setStoryError('We could not remove the public details. Please try again.')
     } finally {
       setWithdrawing(false)
     }
@@ -389,27 +389,30 @@ export default function CaseStatusPage() {
               </ul>
             )}
             <p className="case-status-docs__note">
-              Files are stored locally for demo metadata only. No document
-              content or PHI is placed on-chain.
+              Documents are encrypted and shared only with the verifying
+              hospital. No document content is placed on-chain.
             </p>
           </div>
 
           {view.publicStory ? (
             <div className="case-status-story">
-              <h2 className="case-status-docs__title">Your public story</h2>
+              <h2 className="case-status-docs__title">Public details</h2>
               <p className="case-status-story__note">
                 {isPublished
-                  ? 'This is shown on your public campaign page.'
-                  : 'This will be shown on your campaign page once it goes live.'}{' '}
-                You agreed to share it on{' '}
+                  ? 'These are shown on your public campaign page.'
+                  : 'These will be shown on your campaign page once it goes live.'}{' '}
+                You consented on{' '}
                 {new Date(view.publicStory.consentedAt).toLocaleDateString()}.
               </p>
               <blockquote className="case-status-story__text">
                 <strong>{view.publicStory.displayName}</strong>
-                {(view.publicStory.condition || view.publicStory.country) &&
-                  ` · ${[view.publicStory.condition, view.publicStory.country].filter(Boolean).join(' · ')}`}
-                <br />
-                {view.publicStory.story}
+                {` · ${[view.publicStory.condition, view.publicStory.treatment, view.publicStory.country].filter(Boolean).join(' · ')}`}
+                {view.publicStory.story && (
+                  <>
+                    <br />
+                    {view.publicStory.story}
+                  </>
+                )}
               </blockquote>
               {storyError && (
                 <p className="field-error" role="alert">
@@ -424,20 +427,21 @@ export default function CaseStatusPage() {
                   void handleWithdrawStory()
                 }}
               >
-                {withdrawing ? 'Removing…' : 'Stop sharing and delete my story'}
+                {withdrawing ? 'Removing…' : 'Withdraw consent and remove public details'}
               </button>
             </div>
           ) : view.publicStoryWithdrawnAt ? (
             <p className="case-status-story__note">
-              You stopped sharing your story on{' '}
-              {new Date(view.publicStoryWithdrawnAt).toLocaleDateString()}. It has been
-              deleted and is no longer shown publicly.
+              You withdrew consent on{' '}
+              {new Date(view.publicStoryWithdrawnAt).toLocaleDateString()}. The
+              patient&apos;s public details have been deleted and are no longer shown.
             </p>
           ) : null}
 
           <p className="case-status-panel__privacy">
-            Your case details are encrypted at rest and only shown to the
-            verifying hospital. See the Privacy page for how data is handled.
+            Your documents and private case details are encrypted at rest and
+            only shown to the verifying hospital. See the Privacy page for how
+            data is handled.
           </p>
 
           <div className="case-status-panel__actions">

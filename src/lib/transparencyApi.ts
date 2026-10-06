@@ -32,6 +32,7 @@ export interface TransparencyDetail {
   expired: boolean
   verificationStatus: string
   verifiedByEmail: string | null
+  isDemo: boolean
   timeline: Array<{
     id: string
     at: string

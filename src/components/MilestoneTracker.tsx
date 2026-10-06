@@ -1,6 +1,6 @@
 /**
- * Public milestone escrow tracker — each reached 25% tranche is sent to the
- * hospital on-chain automatically; released tranches link to Solana Explorer.
+ * Public milestone escrow tracker — each crossed 25% tranche is released to the
+ * hospital by a permissionless instruction; released tranches link to Solana Explorer.
  */
 import { faCircleCheck, faLock, faSpinner } from '@fortawesome/free-solid-svg-icons'
 import FaIcon from './FaIcon'
@@ -123,10 +123,10 @@ export default function MilestoneTracker({
         </div>
       ) : (
         <p className="milestone-tracker__note">
-          Each 25% is sent to the hospital's wallet by the smart contract the
-          moment it's reached.
+          Released by a permissionless instruction the moment each 25% threshold
+          is crossed.
           {expiresAt
-            ? ` Anything still in escrow on ${formatCampaignExpiry(expiresAt)} goes to the hospital too.`
+            ? ` Anything still in escrow on ${formatCampaignExpiry(expiresAt)} goes to the hospital too, so partial funding still reaches the treating hospital.`
             : ''}
         </p>
       )}

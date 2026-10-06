@@ -198,12 +198,12 @@ export function createCaseRouter(
           documents,
           collectCoverImage(req),
           {
-            shareStory: body.shareStory,
             consent: body.storyConsent,
             sharedBy: body.storySharedBy,
             displayName: body.storyDisplayName,
             country: body.storyCountry,
             condition: body.storyCondition,
+            treatment: body.storyTreatment,
             story: body.storyText,
           }
         )
@@ -212,9 +212,6 @@ export function createCaseRouter(
           ...result.view,
           ...(result.demoVerifyUrl
             ? { demoVerifyUrl: result.demoVerifyUrl }
-            : {}),
-          ...(result.testInboxEmail
-            ? { testInboxEmail: result.testInboxEmail }
             : {}),
         })
       } catch (err) {

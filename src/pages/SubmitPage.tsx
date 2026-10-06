@@ -4,44 +4,39 @@ import { faLock } from '@fortawesome/free-solid-svg-icons'
 import StepIndicator from '../components/StepIndicator'
 import SectionHeading from '../components/SectionHeading'
 import FaIcon from '../components/FaIcon'
-import TestInboxEmailModal from '../components/TestInboxEmailModal'
-import {
-  CaseApiError,
-  TEST_HOSPITAL_EMAIL,
-  createCase,
-  fetchCurrentCase,
-  type CreatedCase,
-} from '../lib/caseApi'
+import { CaseApiError, createCase, fetchCurrentCase } from '../lib/caseApi'
 import { COVER_IMAGE_ACCEPT, prepareCoverImage } from '../lib/coverImage'
-import { IS_MAINNET } from '../lib/network'
 
 const STEPS = [
   { label: 'Treatment need' },
   { label: 'Cost & institution' },
   { label: 'Assistance' },
-  { label: 'Your story (optional)' },
+  { label: 'Public details' },
   { label: 'Photo, documents & submit' },
 ]
 
 const STORY_STEP = 3
 const FINAL_STEP = 4
 
+const PUBLIC_CONSENT_TEXT =
+  "I consent to the patient's name and condition being displayed publicly. Medical documents remain private and off-chain."
+
 interface StoryState {
-  share: boolean
   sharedBy: '' | 'PATIENT' | 'GUARDIAN'
   displayName: string
   country: string
   condition: string
+  treatment: string
   story: string
   consent: boolean
 }
 
 const INITIAL_STORY: StoryState = {
-  share: false,
   sharedBy: '',
   displayName: '',
   country: '',
   condition: '',
+  treatment: '',
   story: '',
   consent: false,
 }
@@ -106,7 +101,6 @@ export default function SubmitPage() {
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
   const [coverError, setCoverError] = useState<string | null>(null)
   const [coverProcessing, setCoverProcessing] = useState(false)
-  const [testInboxCase, setTestInboxCase] = useState<CreatedCase | null>(null)
   const [story, setStory] = useState<StoryState>(INITIAL_STORY)
   const [storyError, setStoryError] = useState<string | null>(null)
 
@@ -223,12 +217,15 @@ export default function SubmitPage() {
         newErrors.providerCostEstimate = 'Enter the estimated treatment cost.'
       }
     }
-    if (step === STORY_STEP && story.share) {
+    if (step === STORY_STEP) {
+      const storyLength = story.story.trim().length
       let message: string | null = null
       if (!story.sharedBy) message = 'Tell us whether you are the patient or their parent / guardian.'
-      else if (!story.displayName.trim()) message = 'Enter the name to show (a first name or nickname is enough).'
-      else if (story.story.trim().length < 20) message = 'Write at least a couple of sentences for your story.'
-      else if (!story.consent) message = 'Tick the consent box to share publicly, or turn sharing off.'
+      else if (!story.displayName.trim()) message = "Enter the patient's name as it should appear publicly."
+      else if (!story.condition.trim()) message = 'Enter the condition (disease) to display.'
+      else if (!story.treatment.trim()) message = 'Enter the treatment to display.'
+      else if (storyLength > 0 && storyLength < 20) message = 'Write at least a couple of sentences, or leave the story empty.'
+      else if (!story.consent) message = 'Tick the consent box to continue.'
       setStoryError(message)
       if (message) return false
     }
@@ -275,21 +272,15 @@ export default function SubmitPage() {
           documentType: d.documentType,
         })),
         coverImage: coverImage ?? undefined,
-        publicStory:
-          story.share && story.consent && story.sharedBy
-            ? {
-                sharedBy: story.sharedBy,
-                displayName: story.displayName.trim(),
-                country: story.country.trim(),
-                condition: story.condition.trim(),
-                story: story.story.trim(),
-              }
-            : undefined,
+        publicStory: {
+          sharedBy: story.sharedBy || 'PATIENT',
+          displayName: story.displayName.trim(),
+          country: story.country.trim(),
+          condition: story.condition.trim(),
+          treatment: story.treatment.trim(),
+          story: story.story.trim(),
+        },
       })
-      if (created.testInboxEmail) {
-        setTestInboxCase(created)
-        return
-      }
       navigate(`/submit/status/${created.publicCaseId}`, { replace: true })
     } catch (err) {
       setFormError(
@@ -430,21 +421,6 @@ export default function SubmitPage() {
                     our verified hospital list). Personal email domains are
                     rejected.
                   </p>
-                  {!IS_MAINNET && (
-                    <p className="field-help field-help--test" id="hospital-email-test">
-                      Just testing? Put mail{' '}
-                      <button
-                        type="button"
-                        className="field-help__code-btn"
-                        onClick={() => update('hospitalEmail', TEST_HOSPITAL_EMAIL)}
-                        title="Use the test email"
-                      >
-                        {TEST_HOSPITAL_EMAIL}
-                      </button>{' '}
-                      for testing — you&apos;ll see the hospital&apos;s email
-                      yourself and can verify the case.
-                    </p>
-                  )}
                   <input
                     id="hospitalEmail"
                     type="email"
@@ -482,7 +458,7 @@ export default function SubmitPage() {
                     type="text"
                     inputMode="decimal"
                     className={`field-input${errors.providerCostEstimate ? ' field-input--error' : ''}`}
-                    placeholder="e.g. 5000"
+                    placeholder="e.g. 8000"
                     value={form.providerCostEstimate}
                     onChange={e =>
                       update('providerCostEstimate', e.target.value)
@@ -557,44 +533,16 @@ export default function SubmitPage() {
             {step === STORY_STEP && (
               <section aria-labelledby="step-story-heading">
                 <h2 id="step-story-heading" className="submit-form__step-title">
-                  Your story (optional)
+                  Public details
                 </h2>
                 <p className="submit-form__step-intro">
-                  Donors give more when they know who they are helping. You decide
-                  whether to share anything. If you don&apos;t, your campaign shows
-                  only the verified funding goal.
+                  Once the hospital verifies the case, the campaign page shows the
+                  patient&apos;s name, condition, treatment and the funding gap.
+                  Medical documents are never shown. You can withdraw these details
+                  later from your case page.
                 </p>
 
-                <fieldset className="story-choice">
-                  <legend className="field-label">Share a public story?</legend>
-                  <label className="story-choice__option">
-                    <input
-                      type="radio"
-                      name="shareStory"
-                      checked={!story.share}
-                      onChange={() => updateStory('share', false)}
-                    />
-                    <span>
-                      <strong>Keep everything private</strong>
-                      <span className="field-help">Only the funding goal and progress are public.</span>
-                    </span>
-                  </label>
-                  <label className="story-choice__option">
-                    <input
-                      type="radio"
-                      name="shareStory"
-                      checked={story.share}
-                      onChange={() => updateStory('share', true)}
-                    />
-                    <span>
-                      <strong>Share our story publicly</strong>
-                      <span className="field-help">You choose exactly what to show, and can remove it any time.</span>
-                    </span>
-                  </label>
-                </fieldset>
-
-                {story.share && (
-                  <div className="story-fields">
+                <div className="story-fields">
                     <fieldset className="story-choice">
                       <legend className="field-label">
                         Who is sharing?{' '}
@@ -620,26 +568,24 @@ export default function SubmitPage() {
                       </label>
                     </fieldset>
 
-                    <div className="field-group">
-                      <label htmlFor="storyDisplayName" className="field-label">
-                        Name to show{' '}
-                        <span className="field-required" aria-hidden="true">*</span>
-                      </label>
-                      <p className="field-help">A first name or nickname is enough. Avoid surnames.</p>
-                      <input
-                        id="storyDisplayName"
-                        type="text"
-                        maxLength={60}
-                        className="field-input"
-                        placeholder="e.g. Aarav"
-                        value={story.displayName}
-                        onChange={e => updateStory('displayName', e.target.value)}
-                      />
-                    </div>
-
                     <div className="story-fields__row">
                       <div className="field-group">
-                        <label htmlFor="storyCountry" className="field-label">Country</label>
+                        <label htmlFor="storyDisplayName" className="field-label">
+                          Patient name{' '}
+                          <span className="field-required" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="storyDisplayName"
+                          type="text"
+                          maxLength={60}
+                          className="field-input"
+                          placeholder="e.g. Aarav Shrestha"
+                          value={story.displayName}
+                          onChange={e => updateStory('displayName', e.target.value)}
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label htmlFor="storyCountry" className="field-label">Country (optional)</label>
                         <input
                           id="storyCountry"
                           type="text"
@@ -650,24 +596,44 @@ export default function SubmitPage() {
                           onChange={e => updateStory('country', e.target.value)}
                         />
                       </div>
+                    </div>
+
+                    <div className="story-fields__row">
                       <div className="field-group">
-                        <label htmlFor="storyCondition" className="field-label">Condition (optional)</label>
+                        <label htmlFor="storyCondition" className="field-label">
+                          Condition{' '}
+                          <span className="field-required" aria-hidden="true">*</span>
+                        </label>
                         <input
                           id="storyCondition"
                           type="text"
                           maxLength={120}
                           className="field-input"
-                          placeholder="e.g. Gaucher disease"
+                          placeholder="e.g. Spinal Muscular Atrophy (SMA)"
                           value={story.condition}
                           onChange={e => updateStory('condition', e.target.value)}
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label htmlFor="storyTreatment" className="field-label">
+                          Treatment{' '}
+                          <span className="field-required" aria-hidden="true">*</span>
+                        </label>
+                        <input
+                          id="storyTreatment"
+                          type="text"
+                          maxLength={160}
+                          className="field-input"
+                          placeholder="e.g. Nusinersen loading doses"
+                          value={story.treatment}
+                          onChange={e => updateStory('treatment', e.target.value)}
                         />
                       </div>
                     </div>
 
                     <div className="field-group">
                       <label htmlFor="storyText" className="field-label">
-                        Your story{' '}
-                        <span className="field-required" aria-hidden="true">*</span>
+                        Short story (optional)
                       </label>
                       <p className="field-help field-help--warning">
                         Don&apos;t include surnames, addresses, phone numbers, ID or
@@ -688,22 +654,21 @@ export default function SubmitPage() {
                     <label className="story-consent">
                       <input
                         type="checkbox"
+                        required
+                        aria-required="true"
                         checked={story.consent}
                         onChange={e => updateStory('consent', e.target.checked)}
                       />
                       <span>
-                        I am the patient, or the patient&apos;s parent / legal
-                        guardian, and I agree that the name, country, condition and
-                        story above will be shown publicly on the campaign page,
-                        where anyone can read, copy or share them. I can withdraw
-                        this at any time from my case page — RareDiseaseCF then
-                        removes the story from the site, but copies others already
-                        made cannot be recalled. Medical documents are never
-                        published.
+                        {PUBLIC_CONSENT_TEXT}{' '}
+                        <span className="field-required" aria-hidden="true">*</span>
                       </span>
                     </label>
+                    <p className="field-help">
+                      If you withdraw later, the details are removed from this site,
+                      but copies others already made cannot be recalled.
+                    </p>
                   </div>
-                )}
 
                 {storyError && (
                   <p className="field-error" role="alert">
@@ -881,8 +846,12 @@ export default function SubmitPage() {
                       <dd>{coverImage ? 'Added' : 'None'}</dd>
                     </div>
                     <div className="summary-card__row">
-                      <dt>Public story</dt>
-                      <dd>{story.share ? `Shared as “${story.displayName.trim()}”` : 'Private'}</dd>
+                      <dt>Shown publicly</dt>
+                      <dd>
+                        {[story.displayName.trim(), story.condition.trim()]
+                          .filter(Boolean)
+                          .join(' · ') || '—'}
+                      </dd>
                     </div>
                   </dl>
                 </div>
@@ -891,11 +860,10 @@ export default function SubmitPage() {
                   By submitting, you confirm you are the patient or are
                   authorized to act for them, and you agree that these details
                   and documents are shared with the hospital you listed so it
-                  can verify the case. Everything is encrypted and nothing
-                  personal is written on-chain.
-                  {story.share &&
-                    ' The story you chose to share is shown on the campaign page once the hospital verifies the case.'}{' '}
-                  See our{' '}
+                  can verify the case. Documents are encrypted and never written
+                  on-chain. The patient&apos;s name, condition, treatment and the
+                  funding gap are shown on the campaign page once the hospital
+                  verifies the case. See our{' '}
                   <Link to="/privacy">Privacy Policy</Link>.
                 </p>
               </section>
@@ -957,16 +925,6 @@ export default function SubmitPage() {
           </div>
         </div>
       </div>
-
-      <TestInboxEmailModal
-        email={testInboxCase?.testInboxEmail ?? null}
-        onClose={() => {
-          if (!testInboxCase) return
-          navigate(`/submit/status/${testInboxCase.publicCaseId}`, {
-            replace: true,
-          })
-        }}
-      />
     </main>
   )
 }

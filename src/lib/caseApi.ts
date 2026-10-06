@@ -57,7 +57,8 @@ export interface PatientStory {
   displayName: string
   country: string | null
   condition: string | null
-  story: string
+  treatment: string | null
+  story: string | null
   sharedBy: 'PATIENT' | 'GUARDIAN'
   consentedAt: string
 }
@@ -66,6 +67,7 @@ export interface PatientStoryInput {
   displayName: string
   country: string
   condition: string
+  treatment: string
   story: string
   sharedBy: 'PATIENT' | 'GUARDIAN'
 }
@@ -90,8 +92,8 @@ export interface CreateCasePayload {
   documents: CreateCaseDocument[]
   /** Optional public campaign photo */
   coverImage?: File
-  /** Set only when the submitter opted in and ticked the consent box */
-  publicStory?: PatientStoryInput
+  /** Sent only after the submitter ticked the public-display consent box */
+  publicStory: PatientStoryInput
 }
 
 interface ErrorPayload {
@@ -161,15 +163,13 @@ export async function createCase(
   if (payload.coverImage) {
     form.append('coverImage', payload.coverImage)
   }
-  if (payload.publicStory) {
-    form.append('shareStory', 'true')
-    form.append('storyConsent', 'true')
-    form.append('storySharedBy', payload.publicStory.sharedBy)
-    form.append('storyDisplayName', payload.publicStory.displayName)
-    form.append('storyCountry', payload.publicStory.country)
-    form.append('storyCondition', payload.publicStory.condition)
-    form.append('storyText', payload.publicStory.story)
-  }
+  form.append('storyConsent', 'true')
+  form.append('storySharedBy', payload.publicStory.sharedBy)
+  form.append('storyDisplayName', payload.publicStory.displayName)
+  form.append('storyCountry', payload.publicStory.country)
+  form.append('storyCondition', payload.publicStory.condition)
+  form.append('storyTreatment', payload.publicStory.treatment)
+  form.append('storyText', payload.publicStory.story)
 
   let res: Response
   try {
@@ -193,18 +193,7 @@ export async function createCase(
   return (await res.json()) as CreatedCase
 }
 
-/** Devnet only: the hospital email for the aa@aa.aa test inbox. */
-export interface TestInboxEmail {
-  to: string
-  hospitalDisplayName: string
-  publicCaseId: string
-  verifyUrl: string
-  expiresAt: string
-}
-
-export type CreatedCase = OwnerCaseView & { testInboxEmail?: TestInboxEmail }
-
-export const TEST_HOSPITAL_EMAIL = 'aa@aa.aa'
+export type CreatedCase = OwnerCaseView
 
 export async function fetchCurrentCase(): Promise<CurrentCaseResponse> {
   return requestJson<CurrentCaseResponse>('/api/cases/current', {

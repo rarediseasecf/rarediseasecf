@@ -6,6 +6,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import FaIcon from '../components/FaIcon'
 import SolanaTxLink from '../components/SolanaTxLink'
+import DemoDisclaimer from '../components/DemoDisclaimer'
 import CampaignCard, {
   CampaignCardSkeleton,
 } from '../components/CampaignCard'
@@ -77,11 +78,13 @@ export default function HomePage() {
               Live on {NETWORK_NAME}
             </span>
             <h1 id="hero-heading" className="lp-hero__title">
-              Crowd Funding secured by Smart Contract.
+              Patient pays what they can. Insurance pays its share.
             </h1>
             <p className="lp-hero__lede">
-              A hospital verifies each case. Your USDC waits in escrow on Solana,
-              and every 25% raised is paid straight to the hospital's wallet.
+              The hospital verifies via a secure link. Only the leftover gap is
+              crowdfunded — locked in a Solana program and released in 25%
+              tranches directly to the hospital. Unverified cases cannot receive
+              donations.
             </p>
             <div className="lp-hero__actions">
               <Link to="/campaigns" className="btn btn--lg lp-btn-ink">
@@ -93,27 +96,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <figure className="lp-video">
-            <video
-              className="lp-video__media"
-              src="/walkthrough/walkthrough-hero.mp4?v=3"
-              poster="/walkthrough/walkthrough-hero.jpg?v=3"
-              width={1440}
-              height={1234}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              aria-label="Walkthrough: a case is submitted, the hospital approves it, a donor funds it, and the first 25% is paid to the hospital on Solana"
-            />
-            <figcaption className="lp-video__caption">
-              <span>The whole flow in under a minute</span>
-              <a href="/walkthrough/walkthrough.mp4" target="_blank" rel="noopener noreferrer">
-                Full video <FaIcon icon={faArrowUpRightFromSquare} size="xs" />
-              </a>
-            </figcaption>
-          </figure>
+          <GapExample />
         </div>
       </section>
 
@@ -128,6 +111,7 @@ export default function HomePage() {
               See all <FaIcon icon={faArrowRight} size="sm" />
             </Link>
           </div>
+          <DemoDisclaimer />
 
           {state.phase === 'loading' && (
             <ul className="campaigns-grid" aria-label="Loading campaigns" aria-busy="true">
@@ -163,20 +147,22 @@ export default function HomePage() {
             How it works
           </h2>
           <ol className="lp-steps">
-            <Step n="1" title="Submit privately">
-              Treatment, cost, documents and the hospital's email. Nothing personal
-              is ever made public.
+            <Step n="1" title="Submit the case">
+              Treatment, costs, documents and the hospital's email. Documents stay
+              private; the patient's name and condition are shown only with consent.
             </Step>
             <Step n="2" title="Hospital verifies">
               The hospital approves from a one-time link and adds the wallet that
               receives funds.
             </Step>
             <Step n="3" title="Donors fund escrow">
-              USDC goes into an account the program controls, not to us or the patient.
+              Gap attested by the hospital, locked by the program. USDC goes into an
+              account the program controls, not to us or the patient.
             </Step>
             <Step n="4" title="Hospital gets paid">
-              Each 25% is released automatically. Whatever remains after 180 days
-              goes to the hospital too.
+              Released by a permissionless instruction the moment each 25% threshold
+              is crossed. Whatever remains after 180 days goes to the hospital too,
+              so partial funding still reaches the treating hospital.
             </Step>
           </ol>
         </div>
@@ -191,8 +177,9 @@ export default function HomePage() {
               Enforced by a program, <em>not a promise.</em>
             </h2>
             <p className="lp-money__lede">
-              Nobody on the team can withdraw donations. Payouts are public
-              Solana transactions that anyone can check.
+              The program pays out only to the hospital wallet registered for each
+              campaign, and every payout is a public Solana transaction. During the
+              Devnet beta the team still holds the program&apos;s upgrade key.
             </p>
             <a href={PROGRAM_URL} target="_blank" rel="noopener noreferrer" className="lp-money__program">
               Program <span className="lp-mono">{shortHash(PROGRAM_ADDRESS)}</span>{' '}
@@ -209,11 +196,11 @@ export default function HomePage() {
         <div className="container lp-privacy">
           <div>
             <h2 id="privacy-heading" className="lp-display lp-section__title">
-              Private by default.
+              What&apos;s public, what&apos;s private.
             </h2>
             <p className="lp-section__sub">
-              Medical records stay with the hospital. A patient story is shown
-              only if the patient or guardian chooses to share it.
+              The patient or guardian consents before the name and condition are
+              shown. Medical documents stay off-chain with the hospital.
             </p>
             <Link to="/privacy" className="lp-link-arrow">
               Privacy details <FaIcon icon={faArrowRight} size="sm" />
@@ -221,10 +208,16 @@ export default function HomePage() {
           </div>
           <table className="lp-table">
             <tbody>
-              <Row what="Medical documents and records" who="private" />
-              <Row what="Patient name, photo and story" who="choice" />
-              <Row what="Funding goal and progress" who="public" />
-              <Row what="Donations, payouts and the hospital's payout wallet (on-chain)" who="public" />
+              <Row what="Patient name, disease, treatment, funding gap" who="site" />
+              <Row
+                what="Donations, payouts, hospital receiving wallet (visible in payout transactions)"
+                who="chain"
+              />
+              <Row
+                what="Medical reports, hospital stamp image, insurance documents, patient ID / address"
+                who="private"
+              />
+              <Row what="Verification status (VERIFIED badge)" who="public" />
             </tbody>
           </table>
         </div>
@@ -250,6 +243,57 @@ export default function HomePage() {
   )
 }
 
+const GAP_EXAMPLE = {
+  treatment: 8000,
+  insurance: 5200,
+  patient: 1000,
+}
+
+function GapExample() {
+  const gap = GAP_EXAMPLE.treatment - GAP_EXAMPLE.insurance - GAP_EXAMPLE.patient
+  const usd = (n: number) => `$${n.toLocaleString('en-US')}`
+  return (
+    <figure className="lp-gap" aria-labelledby="gap-example-title">
+      <div className="lp-gap__head">
+        <span id="gap-example-title" className="lp-gap__title">
+          Example: SMA treatment
+        </span>
+        <span className="demo-badge">DEMO</span>
+      </div>
+      <dl className="lp-gap__rows">
+        <div className="lp-gap__row">
+          <dt>Total treatment cost</dt>
+          <dd>{usd(GAP_EXAMPLE.treatment)}</dd>
+        </div>
+        <div className="lp-gap__row">
+          <dt>Insurance pays its share</dt>
+          <dd>− {usd(GAP_EXAMPLE.insurance)}</dd>
+        </div>
+        <div className="lp-gap__row">
+          <dt>Patient pays what they can</dt>
+          <dd>− {usd(GAP_EXAMPLE.patient)}</dd>
+        </div>
+        <div className="lp-gap__row lp-gap__row--total">
+          <dt>Crowdfunded gap</dt>
+          <dd>{gap.toLocaleString('en-US')} USDC</dd>
+        </div>
+      </dl>
+      <ol className="lp-gap__tranches" aria-label="Released in 25% tranches">
+        {[25, 50, 75, 100].map(p => (
+          <li key={p}>
+            <span>{p}%</span>
+            <strong>{(gap / 4).toLocaleString('en-US')} USDC</strong>
+          </li>
+        ))}
+      </ol>
+      <figcaption className="lp-gap__foot">
+        Gap attested by the hospital, locked by the program. Each tranche goes
+        directly to the hospital&apos;s wallet.
+      </figcaption>
+    </figure>
+  )
+}
+
 function Step({ n, title, children }: { n: string; title: string; children: ReactNode }) {
   return (
     <li className="lp-step">
@@ -262,13 +306,20 @@ function Step({ n, title, children }: { n: string; title: string; children: Reac
   )
 }
 
-function Row({ what, who }: { what: string; who: 'private' | 'public' | 'choice' }) {
+const ROW_LABELS = {
+  site: 'Public on site',
+  chain: 'Public on Solana',
+  private: 'Private (off-chain)',
+  public: 'Public',
+} as const
+
+function Row({ what, who }: { what: string; who: keyof typeof ROW_LABELS }) {
   return (
     <tr>
       <td>{what}</td>
       <td>
-        <span className={`lp-pill lp-pill--${who}`}>
-          {who === 'choice' ? "patient's choice" : who}
+        <span className={`lp-pill lp-pill--${who === 'private' ? 'private' : 'public'}`}>
+          {ROW_LABELS[who]}
         </span>
       </td>
     </tr>

@@ -49,6 +49,14 @@ export interface PublicCampaign {
   publishedAt: string
   verificationStatus: 'VERIFIED' | 'UNVERIFIED'
   verifiedByEmail: string | null
+  /** Verified by the fictional Devnet demo hospital — not a real patient */
+  isDemo: boolean
+  /** Amounts the hospital attested; the goal is cost − insurance − contribution */
+  costBreakdown: {
+    treatmentCostUsdc: string
+    insuranceCoverageUsdc: string
+    patientContributionUsdc: string
+  }
   milestones: PublicMilestone[]
   /** Funds left in escrow at the end date, sent to the hospital */
   finalRelease: PublicRelease | null

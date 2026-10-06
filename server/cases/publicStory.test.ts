@@ -4,13 +4,13 @@ import { AppError } from '../errors.js'
 import { activePublicStory, validatePublicStoryInput } from './publicStory.js'
 
 const valid = {
-  shareStory: 'true',
   consent: 'true',
   sharedBy: 'GUARDIAN',
   displayName: '  Aarav ',
-  country: 'Nepal',
-  condition: '',
-  story: 'Aarav is seven and needs enzyme replacement therapy this year.',
+  country: '',
+  condition: 'Spinal Muscular Atrophy (SMA)',
+  treatment: 'Nusinersen loading doses',
+  story: '',
 }
 
 function code(fn: () => unknown): string | undefined {
@@ -22,24 +22,26 @@ function code(fn: () => unknown): string | undefined {
   return undefined
 }
 
-describe('public patient story', () => {
-  it('is off unless the submitter opts in', () => {
-    assert.equal(validatePublicStoryInput({}), null)
-    assert.equal(validatePublicStoryInput({ ...valid, shareStory: 'false' }), null)
-  })
-
+describe('public patient details', () => {
   it('requires explicit consent and a patient / guardian role', () => {
+    assert.equal(code(() => validatePublicStoryInput({})), 'PUBLIC_STORY_CONSENT_REQUIRED')
     assert.equal(code(() => validatePublicStoryInput({ ...valid, consent: undefined })), 'PUBLIC_STORY_CONSENT_REQUIRED')
     assert.equal(code(() => validatePublicStoryInput({ ...valid, sharedBy: 'FRIEND' })), 'INVALID_PUBLIC_STORY')
   })
 
+  it('requires name, condition and treatment', () => {
+    for (const field of ['displayName', 'condition', 'treatment'] as const) {
+      assert.equal(code(() => validatePublicStoryInput({ ...valid, [field]: '  ' })), 'INVALID_PUBLIC_STORY')
+    }
+  })
+
   it('trims fields, drops empty optionals, and enforces lengths', () => {
-    const story = validatePublicStoryInput(valid)
-    assert.deepEqual(story, {
+    assert.deepEqual(validatePublicStoryInput(valid), {
       displayName: 'Aarav',
-      country: 'Nepal',
-      condition: null,
-      story: valid.story,
+      country: null,
+      condition: 'Spinal Muscular Atrophy (SMA)',
+      treatment: 'Nusinersen loading doses',
+      story: null,
       sharedBy: 'GUARDIAN',
     })
     assert.equal(code(() => validatePublicStoryInput({ ...valid, story: 'too short' })), 'INVALID_PUBLIC_STORY')

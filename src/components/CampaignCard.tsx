@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { PublicCampaign } from '../lib/publicCampaignApi'
 import { formatCampaignExpiry } from '../lib/publicCampaignApi'
 import FundingProgress from './FundingProgress'
-import StatusBadge, { VerifiedByBadge } from './StatusBadge'
+import StatusBadge, { DemoBadge, VerifiedByBadge } from './StatusBadge'
 
 interface CampaignCardProps {
   campaign: PublicCampaign
@@ -35,6 +35,7 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
 
       <div className="campaign-card__body">
         <div className="campaign-card__meta">
+          {campaign.isDemo && <DemoBadge />}
           <StatusBadge status={campaign.status === 'ACTIVE' ? 'ACTIVE' : 'PUBLISHED'} />
           {campaign.verificationStatus === 'VERIFIED' && (
             <VerifiedByBadge email={campaign.verifiedByEmail} />
@@ -43,7 +44,18 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
 
         <h3 className="campaign-card__title">{campaign.title}</h3>
         {campaign.patientStory && (
-          <p className="campaign-card__story">{campaign.patientStory.story}</p>
+          <>
+            {(campaign.patientStory.condition || campaign.patientStory.treatment) && (
+              <p className="campaign-card__condition">
+                {[campaign.patientStory.condition, campaign.patientStory.treatment]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+            )}
+            {campaign.patientStory.story && (
+              <p className="campaign-card__story">{campaign.patientStory.story}</p>
+            )}
+          </>
         )}
 
         <p className="campaign-card__provider">
