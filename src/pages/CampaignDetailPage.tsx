@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import FundingProgress from '../components/FundingProgress'
 import StatusBadge, { DemoBadge, VerifiedByBadge } from '../components/StatusBadge'
 import VerificationChecklist from '../components/VerificationChecklist'
 import DonationSelector from '../components/DonationSelector'
@@ -309,19 +308,6 @@ export default function CampaignDetailPage() {
               <p className="info-card__privacy-note">
                 Gap attested by the hospital, locked by the program.
               </p>
-            </div>
-
-            <div className="info-card">
-              <h2 className="info-card__title">Funding progress</h2>
-              <FundingProgress
-                amountRaisedUsdc={raised}
-                verifiedFundingGoalUsdc={campaign.verifiedFundingGoalUsdc}
-                remainingUsdc={remaining}
-                fundingPercent={pct}
-                showRemaining
-                showPct
-                size="lg"
-              />
             </div>
 
             <div className="info-card">

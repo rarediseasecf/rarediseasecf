@@ -1605,6 +1605,12 @@ dialog.modal::backdrop {
 }
 
 .campaign-detail__sidebar { position: sticky; top: 5rem; display: flex; flex-direction: column; gap: 1rem; }
+.donation-selector .field-error {
+  max-height: 6rem;
+  overflow: auto;
+  line-height: 1.4;
+  word-break: break-word;
+}
 
 /* Sidebar progress card */
 .sidebar-progress-card {

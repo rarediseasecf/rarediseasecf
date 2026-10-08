@@ -107,13 +107,7 @@ export default function DonationSelector({
       })
       await recordDonation({ txHash: chain.signature })
     } catch (err) {
-      setDonateError(
-        err instanceof PublicCampaignApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'Donation failed.'
-      )
+      setDonateError(formatDonateError(err))
     } finally {
       setDonateBusy(false)
     }
@@ -345,4 +339,17 @@ export default function DonationSelector({
       />
     </div>
   )
+}
+
+function formatDonateError(err: unknown): string {
+  if (err instanceof PublicCampaignApiError) return err.message
+  const raw = err instanceof Error ? err.message : ''
+  if (
+    /AccountNotInitialized|donor_token|0xbc4/i.test(raw) ||
+    /insufficient funds/i.test(raw)
+  ) {
+    return 'This wallet has no Devnet USDC yet. Get free test USDC from faucet.circle.com (Solana Devnet), then try again.'
+  }
+  if (raw) return raw
+  return 'Donation failed.'
 }
